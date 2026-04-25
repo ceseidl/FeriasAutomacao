@@ -85,11 +85,14 @@ jobs:
             - Mensagem: ${{ github.event.head_commit.message }}
             - Disparado por: ${{ github.actor }}
 
-            **Como usar:** baixe `FeriasAutomacao-latest.zip`, extraia, abra
-            `docs/MANUAL.docx` e siga o passo-a-passo.
+            **Opcoes de download:**
+            - `FeriasAutomacao-1.0.0.msi` - instalador (recomendado)
+            - `FeriasAutomacao-latest.zip` - versao portatil
 
-            ZIP enxuto - contem apenas:
-            - Atalhos `Gerar Relatorio.lnk` e `.bat`
+            Apos instalar/extrair, abra `docs/MANUAL.docx` e siga o
+            passo-a-passo.
+
+            Conteudo:
             - Scripts `gui.ps1`, `executar.ps1`, `template.md`
             - Planilha `ferias-2026.xlsx`
             - Recursos `assets/` (icone, CSS, header, filtro Mermaid)
@@ -110,12 +113,11 @@ jobs:
           body: |
             Release oficial **${{ github.ref_name }}** do Ferias Automacao.
 
-            **Como usar:** baixe `FeriasAutomacao-latest.zip` (ou o
-            `FeriasAutomacao-<data>-<sha>.zip`), extraia, abra
-            `docs/MANUAL.docx` e siga o passo-a-passo.
+            **Como usar:** baixe `FeriasAutomacao-1.0.0.msi` (instalador
+            recomendado) ou `FeriasAutomacao-latest.zip` (versao
+            portatil), e siga o `docs/MANUAL.docx`.
 
-            ZIP enxuto - contem apenas:
-            - Atalhos `Gerar Relatorio.lnk` e `.bat`
+            Conteudo:
             - Scripts `gui.ps1`, `executar.ps1`, `template.md`
             - Planilha `ferias-2026.xlsx`
             - Recursos `assets/` (icone, CSS, header, filtro Mermaid)
@@ -125,3 +127,62 @@ jobs:
           files: |
             ${{ steps.zip.outputs.zip_name }}
             FeriasAutomacao-latest.zip
+
+  msi:
+    name: Empacotar e publicar MSI
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar WiX 4
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 4.0.6
+          wix extension add WixToolset.UI.wixext/4.0.6 --global
+
+      - name: Build do MSI
+        shell: pwsh
+        run: .\installer\build.ps1
+
+      - name: Renomear MSI com data + sha
+        id: msi
+        shell: pwsh
+        run: |
+          $sha = (git rev-parse --short HEAD).Trim()
+          $date = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
+          $src = 'installer\output\FeriasAutomacao-1.0.0.msi'
+          $dst = "FeriasAutomacao-1.0.0-$date-$sha.msi"
+          Copy-Item $src $dst
+          Copy-Item $src 'FeriasAutomacao-1.0.0.msi'
+          "msi_name=$dst"               | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "msi_stable=FeriasAutomacao-1.0.0.msi" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "==> MSI: $dst"
+          Get-ChildItem FeriasAutomacao-*.msi | Format-Table Name, Length
+
+      - name: Upload do artifact (90 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeriasAutomacao-MSI
+          path: ${{ steps.msi.outputs.msi_name }}
+          retention-days: 90
+
+      - name: Anexar MSI a release "latest" (push em main)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: |
+            ${{ steps.msi.outputs.msi_name }}
+            FeriasAutomacao-1.0.0.msi
+
+      - name: Anexar MSI a release versionada (tag vX.Y.Z)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ${{ steps.msi.outputs.msi_name }}
+            FeriasAutomacao-1.0.0.msi

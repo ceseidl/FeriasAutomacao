@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instalador MSI do Ferias Automacao.
+
+  Escopo: per-user (instala em %LocalAppData%\Programs\FeriasAutomacao,
+  sem prompt de UAC). Bom pra ambiente corporativo onde o usuario nao
+  costuma ter direito de admin.
+
+  Build: installer\build.ps1 (envolve "wix build" da WiX 4 toolset).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package
+      Name="Ferias Automacao"
+      Manufacturer="Carlos Seidl"
+      Version="1.0.0"
+      ProductCode="*"
+      UpgradeCode="1278BE29-7DA4-4021-8DB9-CA6F717F49C0"
+      Scope="perUser"
+      Compressed="yes"
+      InstallerVersion="500">
+
+    <SummaryInformation
+        Description="Gerador de relatorio de planejamento de ferias"
+        Manufacturer="Carlos Seidl" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Icone de Add/Remove Programs -->
+    <Icon Id="AppIcon.exe" SourceFile="..\assets\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.exe" />
+    <Property Id="ARPHELPLINK"   Value="https://github.com/ceseidl/FeriasAutomacao" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/ceseidl/FeriasAutomacao" />
+    <!-- ARPNOMODIFY/ARPNOREPAIR ja vem do WixUI_Minimal -->
+
+    <!-- Permite instalar por cima de uma versao mais antiga -->
+    <MajorUpgrade
+        DowngradeErrorMessage="Uma versao mais nova do Ferias Automacao ja esta instalada."
+        AllowSameVersionUpgrades="yes" />
+
+    <!-- UI minima: aceitar licenca + barra de progresso -->
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <Feature Id="Main" Title="Aplicativo principal" Level="1">
+      <ComponentGroupRef Id="AppRootFiles" />
+      <ComponentGroupRef Id="AppAssets" />
+      <ComponentGroupRef Id="AppBin" />
+      <ComponentGroupRef Id="AppDocs" />
+      <ComponentGroupRef Id="StartMenuShortcuts" />
+    </Feature>
+  </Package>
+
+  <!-- ==================================================
+       Estrutura de pastas
+       ================================================== -->
+  <Fragment>
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="FeriasAutomacao">
+          <Directory Id="AssetsFolder" Name="assets" />
+          <Directory Id="BinFolder"    Name="bin" />
+          <Directory Id="DocsFolder"   Name="docs" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="StartMenuGroup" Name="Ferias Automacao" />
+    </StandardDirectory>
+  </Fragment>
+
+  <!-- ==================================================
+       Arquivos da raiz (gui/executar/template/planilha/etc)
+       ================================================== -->
+  <Fragment>
+    <ComponentGroup Id="AppRootFiles" Directory="INSTALLFOLDER">
+      <Component>
+        <File Id="AppGuiPs1" Source="..\gui.ps1" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\executar.ps1" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\template.md" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\ferias-2026.xlsx" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\Gerar Relatorio.bat" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="AppAssets" Directory="AssetsFolder">
+      <Component>
+        <File Id="AssetIconIco" Source="..\assets\icon.ico" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\assets\style.css" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\assets\header.html" KeyPath="yes" />
+      </Component>
+      <Component>
+        <File Source="..\assets\mermaid.lua" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="AppBin" Directory="BinFolder">
+      <Component>
+        <File Source="..\bin\pandoc-installer.msi" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="AppDocs" Directory="DocsFolder">
+      <Component>
+        <File Source="..\docs\MANUAL.docx" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- ==================================================
+       Atalhos no Start Menu
+       (per-user precisa de RegistryValue como KeyPath)
+       ================================================== -->
+  <Fragment>
+    <ComponentGroup Id="StartMenuShortcuts" Directory="StartMenuGroup">
+      <Component Id="ShortcutGerarRelatorio" Guid="*">
+        <Shortcut
+            Id="ShortcutGerarRelatorioLnk"
+            Name="Gerar Relatorio"
+            Description="Abre o gerador de planejamento de ferias"
+            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="AppIcon.exe"
+            IconIndex="0" />
+        <RemoveFolder Id="RemoveStartMenuGroup1" Directory="StartMenuGroup" On="uninstall" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao"
+            Name="installed"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+
+      <Component Id="ShortcutManual" Guid="*">
+        <Shortcut
+            Id="ShortcutManualLnk"
+            Name="Manual do usuario"
+            Description="Abre o manual do Ferias Automacao"
+            Target="[INSTALLFOLDER]docs\MANUAL.docx"
+            WorkingDirectory="DocsFolder" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao"
+            Name="manual"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+
+      <Component Id="ShortcutPasta" Guid="*">
+        <Shortcut
+            Id="ShortcutPastaLnk"
+            Name="Pasta de instalacao"
+            Description="Abre a pasta onde o Ferias Automacao foi instalado"
+            Target="[INSTALLFOLDER]"
+            WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao"
+            Name="folder"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

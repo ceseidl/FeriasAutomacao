@@ -25,3 +25,6 @@ tests/ghost-data/ferias-ghost-mixed.xlsx
 
 # Saida do build-local-zip.ps1
 dist/
+
+# Saida do installer\build.ps1 (MSI gerado localmente)
+installer/output/
