@@ -6,6 +6,9 @@
   sem prompt de UAC). Bom pra ambiente corporativo onde o usuario nao
   costuma ter direito de admin.
 
+  UI: WixUI_FeatureTree - mostra uma arvore de features onde o usuario
+  escolhe o que quer instalar (incluindo onde criar atalhos).
+
   Build: installer\build.ps1 (envolve "wix build" da WiX 4 toolset).
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
@@ -32,23 +35,51 @@
     <Property Id="ARPPRODUCTICON" Value="AppIcon.exe" />
     <Property Id="ARPHELPLINK"   Value="https://github.com/ceseidl/FeriasAutomacao" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/ceseidl/FeriasAutomacao" />
-    <!-- ARPNOMODIFY/ARPNOREPAIR ja vem do WixUI_Minimal -->
 
     <!-- Permite instalar por cima de uma versao mais antiga -->
     <MajorUpgrade
         DowngradeErrorMessage="Uma versao mais nova do Ferias Automacao ja esta instalada."
         AllowSameVersionUpgrades="yes" />
 
-    <!-- UI minima: aceitar licenca + barra de progresso -->
-    <ui:WixUI Id="WixUI_Minimal" />
+    <!-- UI com arvore de features pro usuario escolher onde criar atalhos -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
-    <Feature Id="Main" Title="Aplicativo principal" Level="1">
+    <!-- Feature raiz: aplicativo principal (obrigatorio).
+         Filhos: 3 features opcionais pros locais de atalho. Por padrao
+         tudo instalado; o usuario pode desmarcar o que nao quer. -->
+    <Feature Id="Main"
+             Title="Aplicativo Ferias Automacao"
+             Description="Arquivos do aplicativo (gui, planilha, manual, recursos). Necessario."
+             Level="1"
+             AllowAbsent="no"
+             Display="expand"
+             ConfigurableDirectory="INSTALLFOLDER">
       <ComponentGroupRef Id="AppRootFiles" />
       <ComponentGroupRef Id="AppAssets" />
       <ComponentGroupRef Id="AppBin" />
       <ComponentGroupRef Id="AppDocs" />
-      <ComponentGroupRef Id="StartMenuShortcuts" />
+
+      <Feature Id="ShortcutsStartMenu"
+               Title="Atalhos no Menu Iniciar"
+               Description="Cria atalhos em 'Programas > Ferias Automacao' (Gerar Relatorio, Manual, Pasta de instalacao). Recomendado."
+               Level="1">
+        <ComponentGroupRef Id="AppShortcutsStartMenu" />
+      </Feature>
+
+      <Feature Id="ShortcutsDesktop"
+               Title="Atalho na Area de Trabalho"
+               Description="Cria 'Gerar Relatorio' diretamente na Area de Trabalho."
+               Level="1">
+        <ComponentGroupRef Id="AppShortcutsDesktop" />
+      </Feature>
+
+      <Feature Id="ShortcutsSendTo"
+               Title="Atalho em 'Enviar para'"
+               Description="Adiciona 'Ferias Automacao' ao menu 'Enviar para' do clique-direito do Windows. Util pra abrir uma planilha .xlsx direto no app."
+               Level="1000">
+        <ComponentGroupRef Id="AppShortcutsSendTo" />
+      </Feature>
     </Feature>
   </Package>
 
@@ -69,6 +100,9 @@
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="StartMenuGroup" Name="Ferias Automacao" />
     </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="SendToFolder" />
   </Fragment>
 
   <!-- ==================================================
@@ -125,11 +159,11 @@
   </Fragment>
 
   <!-- ==================================================
-       Atalhos no Start Menu
+       Atalhos: Menu Iniciar
        (per-user precisa de RegistryValue como KeyPath)
        ================================================== -->
   <Fragment>
-    <ComponentGroup Id="StartMenuShortcuts" Directory="StartMenuGroup">
+    <ComponentGroup Id="AppShortcutsStartMenu" Directory="StartMenuGroup">
       <Component Id="ShortcutGerarRelatorio" Guid="*">
         <Shortcut
             Id="ShortcutGerarRelatorioLnk"
@@ -140,11 +174,11 @@
             WorkingDirectory="INSTALLFOLDER"
             Icon="AppIcon.exe"
             IconIndex="0" />
-        <RemoveFolder Id="RemoveStartMenuGroup1" Directory="StartMenuGroup" On="uninstall" />
+        <RemoveFolder Id="RemoveStartMenuGroup" Directory="StartMenuGroup" On="uninstall" />
         <RegistryValue
             Root="HKCU"
-            Key="Software\FeriasAutomacao"
-            Name="installed"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="StartMenu"
             Type="integer"
             Value="1"
             KeyPath="yes" />
@@ -159,8 +193,8 @@
             WorkingDirectory="DocsFolder" />
         <RegistryValue
             Root="HKCU"
-            Key="Software\FeriasAutomacao"
-            Name="manual"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="StartMenuManual"
             Type="integer"
             Value="1"
             KeyPath="yes" />
@@ -175,8 +209,60 @@
             WorkingDirectory="INSTALLFOLDER" />
         <RegistryValue
             Root="HKCU"
-            Key="Software\FeriasAutomacao"
-            Name="folder"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="StartMenuPasta"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- ==================================================
+       Atalho: Area de Trabalho
+       ================================================== -->
+  <Fragment>
+    <ComponentGroup Id="AppShortcutsDesktop" Directory="DesktopFolder">
+      <Component Id="ShortcutDesktop" Guid="*">
+        <Shortcut
+            Id="ShortcutDesktopLnk"
+            Name="Gerar Relatorio"
+            Description="Abre o gerador de planejamento de ferias"
+            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="AppIcon.exe"
+            IconIndex="0" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="Desktop"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- ==================================================
+       Atalho: 'Enviar para' (opcional, off por padrao)
+       ================================================== -->
+  <Fragment>
+    <ComponentGroup Id="AppShortcutsSendTo" Directory="SendToFolder">
+      <Component Id="ShortcutSendTo" Guid="*">
+        <Shortcut
+            Id="ShortcutSendToLnk"
+            Name="Ferias Automacao"
+            Description="Envia uma planilha .xlsx pro Ferias Automacao"
+            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="AppIcon.exe"
+            IconIndex="0" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="SendTo"
             Type="integer"
             Value="1"
             KeyPath="yes" />
