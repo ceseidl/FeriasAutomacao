@@ -1,0 +1,113 @@
+﻿* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    color: #2d3748;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #1a202c;
+}
+
+h1 + p {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-bottom: 16px;
+}
+
+h2 {
+    font-size: 1.3rem;
+    margin: 36px 0 16px 0;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+}
+
+p { margin: 8px 0; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+th {
+    background: #2d3748;
+    color: #fff;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f7fafc; }
+
+blockquote {
+    background: #fff;
+    border-left: 4px solid #4299e1;
+    padding: 12px 20px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: #4a5568;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+blockquote p { margin: 0; }
+
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 32px 0;
+}
+
+.mermaid {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-top: 16px;
+    overflow-x: auto;
+    text-align: center;
+}
+
+code {
+    background: #edf2f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+pre:not(.mermaid) {
+    background: #f7fafc;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+@media print {
+    body { padding: 20px; background: #fff; }
+    .mermaid { box-shadow: none; border: 1px solid #e2e8f0; }
+    table { box-shadow: none; border: 1px solid #e2e8f0; }
+}

@@ -1,0 +1,18 @@
+# Saidas geradas pelo executar.ps1 / gui.ps1
+results/
+
+# Logs do MSI
+*.log
+
+# Backups de Office (usuario abriu a planilha sem fechar)
+~$*
+
+# Sistema
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
