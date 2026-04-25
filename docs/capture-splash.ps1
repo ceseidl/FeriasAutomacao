@@ -112,7 +112,7 @@ $lblName.Size       = New-Object System.Drawing.Size(440, 38)
 $splash.Controls.Add($lblName)
 
 $lblAuthor = New-Object System.Windows.Forms.Label
-$lblAuthor.Text       = "Feito por $AUTOR_FIXO"
+$lblAuthor.Text       = "Desenvolvido por $AUTOR_FIXO"
 $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Italic)
 $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 215, 240)
 $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent

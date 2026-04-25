@@ -134,7 +134,7 @@ function Show-SplashScreen {
 
     # Feito por
     $lblAuthor = New-Object System.Windows.Forms.Label
-    $lblAuthor.Text       = "Feito por $Author"
+    $lblAuthor.Text       = "Desenvolvido por $Author"
     $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Italic)
     $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 215, 240)
     $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent
