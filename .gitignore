@@ -22,3 +22,6 @@ assets/icon-*.png
 
 # Planilha ghost regeneravel pelo Generate-GhostXlsx.ps1
 tests/ghost-data/ferias-ghost-mixed.xlsx
+
+# Saida do build-local-zip.ps1
+dist/
