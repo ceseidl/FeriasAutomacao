@@ -58,7 +58,8 @@ jobs:
             - Disparado por: ${{ github.actor }}
 
             Baixe o ZIP `FeriasAutomacao-latest.zip` para sempre ter a ultima versao.
-          prerelease: true
+          prerelease: false
+          make_latest: "true"
           files: |
             ${{ steps.zip.outputs.zip_name }}
             FeriasAutomacao-latest.zip
