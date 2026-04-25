@@ -17,28 +17,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Gerar ZIP do projeto
+      - name: Gerar ZIP enxuto (so arquivos necessarios + documentacao)
         id: zip
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           DATE=$(date -u +%Y%m%d-%H%M%S)
           ZIP_NAME="FeriasAutomacao-${DATE}-${SHORT_SHA}.zip"
 
-          # Cria o zip excluindo lixo de dev e arquivos regenerados
-          zip -r "${ZIP_NAME}" . \
-            -x ".git/*" \
-            -x ".github/*" \
-            -x ".gitignore" \
-            -x "results/*" \
-            -x "*.log" \
-            -x "assets/icon-*.png" \
-            -x "assets/generate-icon.ps1" \
-            -x "docs/capture-screenshot.ps1"
+          # Monta a estrutura final dentro de uma pasta-stage,
+          # copiando APENAS o que o usuario final precisa.
+          STAGE="FeriasAutomacao"
+          mkdir -p "${STAGE}/assets" "${STAGE}/bin" "${STAGE}/docs"
+
+          # Atalhos e launchers
+          cp "Gerar Relatorio.lnk" "${STAGE}/"
+          cp "Gerar Relatorio.bat" "${STAGE}/"
+
+          # Logica do app
+          cp gui.ps1            "${STAGE}/"
+          cp executar.ps1       "${STAGE}/"
+          cp template.md        "${STAGE}/"
+          cp ferias-2026.xlsx   "${STAGE}/"
+          cp LICENSE            "${STAGE}/"
+
+          # Recursos do HTML + icone
+          cp assets/icon.ico    "${STAGE}/assets/"
+          cp assets/style.css   "${STAGE}/assets/"
+          cp assets/header.html "${STAGE}/assets/"
+          cp assets/mermaid.lua "${STAGE}/assets/"
+
+          # Instalador offline do Pandoc
+          cp bin/pandoc-installer.msi "${STAGE}/bin/"
+
+          # Documentacao (so o manual; screenshot ja esta embutido no docx)
+          cp docs/MANUAL.docx   "${STAGE}/docs/"
+
+          # Empacota a pasta-stage (o ZIP contem a pasta na raiz)
+          zip -r "${ZIP_NAME}" "${STAGE}"
 
           # Copia com nome estavel pra release "latest"
           cp "${ZIP_NAME}" "FeriasAutomacao-latest.zip"
 
           echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "==> Conteudo do ZIP:"
+          unzip -l "${ZIP_NAME}"
+          echo "==> Tamanho:"
           ls -lh FeriasAutomacao-*.zip
 
       - name: Upload do artifact (90 dias)
@@ -60,7 +83,16 @@ jobs:
             - Mensagem: ${{ github.event.head_commit.message }}
             - Disparado por: ${{ github.actor }}
 
-            Baixe o ZIP `FeriasAutomacao-latest.zip` para sempre ter a ultima versao.
+            **Como usar:** baixe `FeriasAutomacao-latest.zip`, extraia, abra
+            `docs/MANUAL.docx` e siga o passo-a-passo.
+
+            ZIP enxuto - contem apenas:
+            - Atalhos `Gerar Relatorio.lnk` e `.bat`
+            - Scripts `gui.ps1`, `executar.ps1`, `template.md`
+            - Planilha `ferias-2026.xlsx`
+            - Recursos `assets/` (icone, CSS, header, filtro Mermaid)
+            - Instalador offline `bin/pandoc-installer.msi`
+            - Manual `docs/MANUAL.docx` e `LICENSE`
           prerelease: false
           make_latest: "true"
           files: |
