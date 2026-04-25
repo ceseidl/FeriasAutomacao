@@ -14,7 +14,7 @@ Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
 
 ## O que faz
 
-1. Le a planilha `ferias-2026.xlsx` (aba `Ferias`)
+1. Le a planilha `Ferias-template.xlsx` (aba `Ferias`)
 2. Preenche um template Markdown com:
    - **Dashboard mensal** (qtd. de pessoas + squads + status geral)
    - **Cronograma detalhado** (linha por colaborador)
@@ -38,7 +38,7 @@ ferias-automacao/
   Gerar Relatorio.bat     -> alternativa ao atalho (mesmo comportamento)
   gui.ps1                 -> janela WinForms (Ano + Planilha + Gerar)
   executar.ps1            -> script principal (uso CLI/automacao)
-  ferias-2026.xlsx        -> planilha com os dados (editar aqui)
+  Ferias-template.xlsx        -> planilha com os dados (editar aqui)
   template.md             -> template Markdown com placeholders
   README.md               -> este arquivo
   results/                -> pasta de saida (criada na 1a execucao)
@@ -78,7 +78,7 @@ atalho `Gerar Relatorio.lnk`. Pra trocar o design:
 
 ## Modo facil (GUI)
 
-1. Editar `ferias-2026.xlsx` na aba `Ferias`. Colunas:
+1. Editar `Ferias-template.xlsx` na aba `Ferias`. Colunas:
 
 | Coluna | Tipo | Exemplo |
 |---|---|---|
@@ -116,7 +116,7 @@ Parametros completos:
 
 | Parametro | Default | Descricao |
 |---|---|---|
-| `-XlsxPath` | `.\ferias-2026.xlsx` | Planilha de entrada |
+| `-XlsxPath` | `.\Ferias-template.xlsx` | Planilha de entrada |
 | `-CsvPath` | (vazio) | Alternativa ao xlsx, separador `;` |
 | `-OutputDir` | `.\results` | Pasta de saida |
 | `-Autor` | `$env:USERNAME` | Nome no rodape e no `<meta name="author">` |
@@ -138,7 +138,7 @@ Na primeira execucao, se o Pandoc nao estiver no PATH, o script tenta nesta orde
 ## Como funciona
 
 ```
-ferias-2026.xlsx
+Ferias-template.xlsx
        |
        v
    executar.ps1 ---- le aba "Ferias", normaliza datas/tipos
@@ -166,7 +166,7 @@ Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa 
 
 | Problema | Solucao |
 |---|---|
-| `Planilha nao encontrada` | Conferir caminho de `ferias-2026.xlsx` |
+| `Planilha nao encontrada` | Conferir caminho de `Ferias-template.xlsx` |
 | Acentos quebrados | Garantir que a planilha esta salva em UTF-8 |
 | HTML sem Gantt | Verificar internet ao abrir o HTML (CDN do Mermaid) |
 | `ImportExcel` falha ao instalar | Rodar PowerShell como admin: `Install-Module ImportExcel -Scope CurrentUser -Force` |

@@ -34,7 +34,7 @@ $pass = 0
 $fail = 0
 
 Write-Host ""
-Write-Host "==> Planilha: ferias-2026.xlsx (so contem 2026)"
+Write-Host "==> Planilha: Ferias-template.xlsx (so contem 2026)"
 Write-Host "==> Rodando 7 cenarios (3 pra tras, ano atual, 3 pra frente)"
 Write-Host ""
 

@@ -120,7 +120,7 @@
         <File Source="..\template.md" KeyPath="yes" />
       </Component>
       <Component>
-        <File Source="..\ferias-2026.xlsx" KeyPath="yes" />
+        <File Source="..\Ferias-template.xlsx" KeyPath="yes" />
       </Component>
       <Component>
         <File Source="..\LICENSE" Name="LICENSE.txt" KeyPath="yes" />

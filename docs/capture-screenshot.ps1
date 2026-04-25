@@ -33,7 +33,7 @@ public class Win32 {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $outPath   = Join-Path $scriptDir 'screenshot.png'
-$xlsxDemo  = Join-Path (Split-Path -Parent $scriptDir) 'ferias-2026.xlsx'
+$xlsxDemo  = Join-Path (Split-Path -Parent $scriptDir) 'Ferias-template.xlsx'
 
 # ================== Form (espelho do gui.ps1) ==================
 $form = New-Object System.Windows.Forms.Form

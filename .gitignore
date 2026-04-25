@@ -28,3 +28,6 @@ dist/
 
 # Saida do installer\build.ps1 (MSI gerado localmente)
 installer/output/
+
+# Notas pessoais de entrega (gerado por mim, nao commita)
+ENTREGA.txt

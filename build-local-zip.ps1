@@ -41,7 +41,7 @@ $arquivos = @(
     @{ Src = 'gui.ps1';                Dst = 'gui.ps1' }
     @{ Src = 'executar.ps1';           Dst = 'executar.ps1' }
     @{ Src = 'template.md';            Dst = 'template.md' }
-    @{ Src = 'ferias-2026.xlsx';       Dst = 'ferias-2026.xlsx' }
+    @{ Src = 'Ferias-template.xlsx';   Dst = 'Ferias-template.xlsx' }
     @{ Src = 'LICENSE';                Dst = 'LICENSE' }
     @{ Src = 'assets\icon.ico';        Dst = 'assets\icon.ico' }
     @{ Src = 'assets\style.css';       Dst = 'assets\style.css' }

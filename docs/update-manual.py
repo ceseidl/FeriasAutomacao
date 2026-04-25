@@ -252,5 +252,39 @@ if not already_done:
 else:
     print('Secao MSI ja presente; nada a fazer em (5).')
 
+# ---------- 6.1) Atualiza descricao da aba Ferias na secao 2.1 ----------
+# Antes mencionava apenas "uma aba chamada Ferias". Agora a planilha tem
+# 5 abas (Ferias + Squads + Integrantes + Status + Instrucoes).
+old_aba = ('A planilha deve ter uma aba chamada Ferias '
+           '(e dela que o app le os dados).')
+new_aba = ('A planilha tem 5 abas: Ferias (a principal, onde o app le os dados), '
+           'Squads (lista de squads), Integrantes (lista de pessoas com seu squad), '
+           'Status (Aprovada/Planejada/Solicitada) e Instrucoes (texto de ajuda). '
+           'As 3 abas de listas alimentam os dropdowns das colunas Colaborador, '
+           'Squad e Status da aba Ferias - pra adicionar uma pessoa nova ou um '
+           'squad novo, edite a aba correspondente.')
+for p in doc.paragraphs:
+    if p.text.strip() == old_aba:
+        for r in list(p.runs):
+            r.text = ''
+        if p.runs:
+            p.runs[0].text = new_aba
+        else:
+            p.add_run(new_aba)
+        break
+
+# ---------- 6.2) Renomeacao da planilha (ferias-2026.xlsx -> Ferias-template.xlsx) ----------
+# Substitui o nome em todos os runs de todos os paragrafos. Idempotente: se
+# o nome ja foi trocado, nao acha mais e nao faz nada.
+old_name = 'ferias-2026.xlsx'
+new_name = 'Ferias-template.xlsx'
+swaps = 0
+for p in doc.paragraphs:
+    for r in p.runs:
+        if old_name in r.text:
+            r.text = r.text.replace(old_name, new_name)
+            swaps += 1
+print(f'Renomeacao da planilha: {swaps} run(s) atualizados.')
+
 doc.save(str(DOCX))
 print(f'OK: {DOCX} atualizado.')

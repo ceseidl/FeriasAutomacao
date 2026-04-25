@@ -1,7 +1,7 @@
 ﻿#requires -Version 5.1
 <#
 .SYNOPSIS
-    Gera Ferias-{timestamp}.md e Ferias-{timestamp}.html a partir de ferias-2026.xlsx.
+    Gera Ferias-{timestamp}.md e Ferias-{timestamp}.html a partir de Ferias-template.xlsx.
 
 .DESCRIPTION
     Le a planilha (aba "Ferias"), preenche o template.md com dashboard + cronograma + gantt,
@@ -9,7 +9,7 @@
     Cada execucao gera arquivos novos com timestamp (yyyyMMdd-HHmmss), preservando historico.
 
 .PARAMETER XlsxPath
-    Caminho para a planilha. Default: .\ferias-2026.xlsx
+    Caminho para a planilha. Default: .\Ferias-template.xlsx
 
 .PARAMETER CsvPath
     Alternativa ao xlsx. Se informado, sobrescreve XlsxPath. Separador esperado: ';'.
@@ -38,7 +38,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$XlsxPath = (Join-Path $PSScriptRoot 'ferias-2026.xlsx'),
+    [string]$XlsxPath = (Join-Path $PSScriptRoot 'Ferias-template.xlsx'),
     [string]$CsvPath,
     [string]$OutputDir = (Join-Path $PSScriptRoot 'results'),
     [string]$TemplatePath = (Join-Path $PSScriptRoot 'template.md'),

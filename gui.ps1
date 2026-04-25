@@ -21,7 +21,7 @@ Add-Type -AssemblyName System.Drawing
 
 $scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $executar    = Join-Path $scriptDir 'executar.ps1'
-$xlsxDefault = Join-Path $scriptDir 'ferias-2026.xlsx'
+$xlsxDefault = Join-Path $scriptDir 'Ferias-template.xlsx'
 $resultsDir  = Join-Path $scriptDir 'results'
 
 if (-not (Test-Path $executar)) {
