@@ -3,6 +3,7 @@ name: Build ZIP
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   workflow_dispatch:  # permite acionar manualmente pela aba Actions
 
 permissions:
@@ -71,7 +72,8 @@ jobs:
           path: ${{ steps.zip.outputs.zip_name }}
           retention-days: 90
 
-      - name: Atualizar release "latest"
+      - name: Atualizar release "latest" (push em main)
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
@@ -95,6 +97,31 @@ jobs:
             - Manual `docs/MANUAL.docx` e `LICENSE`
           prerelease: false
           make_latest: "true"
+          files: |
+            ${{ steps.zip.outputs.zip_name }}
+            FeriasAutomacao-latest.zip
+
+      - name: Publicar release versionada (push de tag vX.Y.Z)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Ferias Automacao ${{ github.ref_name }}
+          body: |
+            Release oficial **${{ github.ref_name }}** do Ferias Automacao.
+
+            **Como usar:** baixe `FeriasAutomacao-latest.zip` (ou o
+            `FeriasAutomacao-<data>-<sha>.zip`), extraia, abra
+            `docs/MANUAL.docx` e siga o passo-a-passo.
+
+            ZIP enxuto - contem apenas:
+            - Atalhos `Gerar Relatorio.lnk` e `.bat`
+            - Scripts `gui.ps1`, `executar.ps1`, `template.md`
+            - Planilha `ferias-2026.xlsx`
+            - Recursos `assets/` (icone, CSS, header, filtro Mermaid)
+            - Instalador offline `bin/pandoc-installer.msi`
+            - Manual `docs/MANUAL.docx` e `LICENSE`
+          prerelease: false
           files: |
             ${{ steps.zip.outputs.zip_name }}
             FeriasAutomacao-latest.zip
