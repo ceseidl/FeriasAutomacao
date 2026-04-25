@@ -31,6 +31,342 @@ if (-not (Test-Path $executar)) {
     exit 1
 }
 
+# ================== Splash Screen ==================
+function Show-SplashScreen {
+    param(
+        [string]$AppName  = 'Planejamento de Ferias',
+        [string]$Author   = 'Carlos Seidl',
+        [string]$IconPath,
+        [int]$DurationMs  = 1800
+    )
+
+    $splash = New-Object System.Windows.Forms.Form
+    $splash.Text             = ''
+    $splash.Size             = New-Object System.Drawing.Size(528, 324)
+    $splash.StartPosition    = 'CenterScreen'
+    $splash.FormBorderStyle  = 'None'
+    $splash.ShowInTaskbar    = $false
+    $splash.TopMost          = $true
+    $splash.UseWaitCursor    = $true
+    $splash.Cursor           = [System.Windows.Forms.Cursors]::WaitCursor
+    $splash.BackColor        = [System.Drawing.Color]::FromArgb(15, 15, 15)
+
+    # Pre-carrega o icone como bitmap em alta resolucao.
+    # O ICO tem entradas PNG-encoded para 64+ que System.Drawing.Icon.ToBitmap()
+    # nao consegue ler no .NET Framework. Solucao: parse manual do arquivo ICO
+    # para extrair a maior entrada (PNG ou BMP) e carregar via Image.FromStream.
+    # Guardamos no Tag do form para acesso confiavel dentro do Paint handler.
+    $iconBmp = $null
+    if ($IconPath -and (Test-Path $IconPath)) {
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($IconPath)
+            if ($bytes.Length -ge 6) {
+                $count = [BitConverter]::ToUInt16($bytes, 4)
+                $bestSize = 0; $bestOffset = 0; $bestLength = 0
+                for ($i = 0; $i -lt $count; $i++) {
+                    $entryOff = 6 + ($i * 16)
+                    $w = [int]$bytes[$entryOff]; if ($w -eq 0) { $w = 256 }
+                    $dataSize = [BitConverter]::ToUInt32($bytes, $entryOff + 8)
+                    $dataOff  = [BitConverter]::ToUInt32($bytes, $entryOff + 12)
+                    if ($w -gt $bestSize) {
+                        $bestSize = $w; $bestOffset = $dataOff; $bestLength = $dataSize
+                    }
+                }
+                # PNG signature: 89 50 4E 47
+                if ($bestLength -gt 0 -and $bytes[$bestOffset] -eq 0x89 -and $bytes[$bestOffset + 1] -eq 0x50) {
+                    $ms = New-Object System.IO.MemoryStream($bytes, $bestOffset, $bestLength)
+                    $iconBmp = [System.Drawing.Image]::FromStream($ms)
+                } else {
+                    # Fallback: BMP/DIB embutido - usa Icon constructor com tamanho menor
+                    $rawIcon = New-Object System.Drawing.Icon($IconPath, 48, 48)
+                    $iconBmp = $rawIcon.ToBitmap()
+                    $rawIcon.Dispose()
+                }
+            }
+        } catch { $iconBmp = $null }
+    }
+    $splash.Tag = $iconBmp
+
+    # Desenha tudo no Paint (gradiente + borda + icone) para evitar
+    # problemas de PictureBox transparente sobre gradiente
+    $splash.Add_Paint({
+        param($sender, $e)
+        $g = $e.Graphics
+        $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+
+        $w = $sender.ClientSize.Width
+        $h = $sender.ClientSize.Height
+
+        # Gradiente preto/cinza-escuro (paleta AI/R)
+        $rect = New-Object System.Drawing.Rectangle(0, 0, $w, $h)
+        $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+            $rect,
+            [System.Drawing.Color]::FromArgb(31, 31, 31),
+            [System.Drawing.Color]::FromArgb(5, 5, 5),
+            [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
+        $g.FillRectangle($brush, $rect)
+        $brush.Dispose()
+
+        # Borda sutil
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(80, 255, 255, 255), 1)
+        $g.DrawRectangle($pen, 0, 0, $w - 1, $h - 1)
+        $pen.Dispose()
+
+        # Icone centralizado (recuperado via Tag do form)
+        $bmp = $sender.Tag
+        if ($bmp) {
+            $iconSize = 115
+            $iconX = [int](($w - $iconSize) / 2)
+            $g.DrawImage($bmp, $iconX, 26, $iconSize, $iconSize)
+        }
+    })
+
+    # Nome do app
+    $lblName = New-Object System.Windows.Forms.Label
+    $lblName.Text       = $AppName
+    $lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 22, [System.Drawing.FontStyle]::Bold)
+    $lblName.ForeColor  = [System.Drawing.Color]::White
+    $lblName.BackColor  = [System.Drawing.Color]::Transparent
+    $lblName.AutoSize   = $false
+    $lblName.TextAlign  = 'MiddleCenter'
+    $lblName.Location   = New-Object System.Drawing.Point(0, 156)
+    $lblName.Size       = New-Object System.Drawing.Size(528, 46)
+    $splash.Controls.Add($lblName)
+
+    # Feito por
+    $lblAuthor = New-Object System.Windows.Forms.Label
+    $lblAuthor.Text       = "Desenvolvido por $Author"
+    $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]::Italic)
+    $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 200, 200)
+    $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent
+    $lblAuthor.AutoSize   = $false
+    $lblAuthor.TextAlign  = 'MiddleCenter'
+    $lblAuthor.Location   = New-Object System.Drawing.Point(0, 210)
+    $lblAuthor.Size       = New-Object System.Drawing.Size(528, 26)
+    $splash.Controls.Add($lblAuthor)
+
+    # Versao discreta no rodape
+    $lblVersion = New-Object System.Windows.Forms.Label
+    $lblVersion.Text       = 'v1.0.0'
+    $lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 10)
+    $lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(140, 140, 140)
+    $lblVersion.BackColor  = [System.Drawing.Color]::Transparent
+    $lblVersion.AutoSize   = $false
+    $lblVersion.TextAlign  = 'MiddleCenter'
+    $lblVersion.Location   = New-Object System.Drawing.Point(0, 276)
+    $lblVersion.Size       = New-Object System.Drawing.Size(528, 22)
+    $splash.Controls.Add($lblVersion)
+
+    $splash.Show()
+    $splash.Refresh()
+    [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::WaitCursor
+    [System.Windows.Forms.Application]::DoEvents()
+
+    # Mantem visivel pelo tempo configurado, com pump de eventos.
+    # Forca o cursor de ampulheta a cada iteracao para que fique
+    # sticky mesmo quando o mouse esta fora da splash.
+    $endAt = (Get-Date).AddMilliseconds($DurationMs)
+    while ((Get-Date) -lt $endAt) {
+        [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::WaitCursor
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 30
+    }
+
+    [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::Default
+    $splash.Close()
+    $splash.Dispose()
+    if ($iconBmp) { $iconBmp.Dispose() }
+}
+
+# ================== Year Picker (popup estilo calendario) ==================
+# Usa ToolStripDropDown -> fecha automaticamente em clique fora / Esc / perda de foco
+function Show-YearPicker {
+    param(
+        [Parameter(Mandatory)] [System.Windows.Forms.Control] $AnchorControl,
+        [Parameter(Mandatory)] [int] $CurrentYear,
+        [int] $MinYear = 2020,
+        [int] $MaxYear = 2100,
+        [string] $TextFormat = '{0}   {1}'
+    )
+
+    $arrowChar = [string][char]0x25BE
+
+    $popupW = 264; $popupH = 226
+
+    # Painel root que vai dentro do dropdown
+    $root = New-Object System.Windows.Forms.Panel
+    $root.Size = New-Object System.Drawing.Size($popupW, $popupH)
+    $root.BackColor = [System.Drawing.Color]::White
+    $root.Add_Paint({
+        param($s, $e)
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(180, 180, 180), 1)
+        $e.Graphics.DrawRectangle($pen, 0, 0, $s.Width - 1, $s.Height - 1)
+        $pen.Dispose()
+    })
+
+    # Estado mutavel (acessivel nos closures aninhados via hashtable)
+    $state = @{
+        SelectedYear = $CurrentYear
+        BaseDecade   = [int]([Math]::Floor($CurrentYear / 10) * 10)
+        MinYear      = $MinYear
+        MaxYear      = $MaxYear
+        Anchor       = $AnchorControl
+        TextFormat   = $TextFormat
+        ArrowChar    = $arrowChar
+        Dropdown     = $null  # preenchido depois que $dropdown for criado
+    }
+
+    # Header
+    $btnPrev = New-Object System.Windows.Forms.Button
+    $btnPrev.Text = [string][char]0x25C0
+    $btnPrev.Location = New-Object System.Drawing.Point(4, 4)
+    $btnPrev.Size = New-Object System.Drawing.Size(36, 30)
+    $btnPrev.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btnPrev.FlatAppearance.BorderSize = 0
+    $btnPrev.BackColor = [System.Drawing.Color]::White
+    $btnPrev.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+    $btnPrev.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+    $btnPrev.TabStop = $false
+    $root.Controls.Add($btnPrev)
+
+    $lblDecade = New-Object System.Windows.Forms.Label
+    $lblDecade.TextAlign = 'MiddleCenter'
+    $lblDecade.Location = New-Object System.Drawing.Point(40, 4)
+    $lblDecade.Size = New-Object System.Drawing.Size(184, 30)
+    $lblDecade.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
+    $lblDecade.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+    $root.Controls.Add($lblDecade)
+
+    $btnNext = New-Object System.Windows.Forms.Button
+    $btnNext.Text = [string][char]0x25B6
+    $btnNext.Location = New-Object System.Drawing.Point(224, 4)
+    $btnNext.Size = New-Object System.Drawing.Size(36, 30)
+    $btnNext.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btnNext.FlatAppearance.BorderSize = 0
+    $btnNext.BackColor = [System.Drawing.Color]::White
+    $btnNext.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+    $btnNext.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+    $btnNext.TabStop = $false
+    $root.Controls.Add($btnNext)
+
+    # Separador
+    $sep = New-Object System.Windows.Forms.Label
+    $sep.Location = New-Object System.Drawing.Point(8, 38)
+    $sep.Size = New-Object System.Drawing.Size(248, 1)
+    $sep.BackColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
+    $root.Controls.Add($sep)
+
+    # Grade de anos
+    $gridPanel = New-Object System.Windows.Forms.Panel
+    $gridPanel.Location = New-Object System.Drawing.Point(4, 42)
+    $gridPanel.Size = New-Object System.Drawing.Size(256, 180)
+    $gridPanel.BackColor = [System.Drawing.Color]::White
+    $root.Controls.Add($gridPanel)
+
+    # Cria o dropdown ja, pois o handler do clique no ano precisa fechar ele
+    $dropdown = New-Object System.Windows.Forms.ToolStripDropDown
+    $dropdown.AutoClose          = $true
+    $dropdown.Padding            = [System.Windows.Forms.Padding]::Empty
+    $dropdown.Margin             = [System.Windows.Forms.Padding]::Empty
+    $dropdown.DropShadowEnabled  = $true
+    $dropdown.BackColor          = [System.Drawing.Color]::White
+    $state.Dropdown = $dropdown
+
+    # Handler de clique de ano definido no escopo da funcao (onde $state e LOCAL)
+    # Closures aninhados em PowerShell nao capturam variaveis herdadas, por isso
+    # criamos o scriptblock aqui e reusamos em todas as celulas via Add_Click().
+    $onYearClick = {
+        try {
+            $picked = [int]$this.Tag
+            $state.Anchor.Tag  = $picked
+            $state.Anchor.Text = ($state.TextFormat -f $picked, $state.ArrowChar)
+        } catch {
+            [System.Windows.Forms.MessageBox]::Show("Erro ao selecionar ano: $($_.Exception.Message)", 'Erro', 'OK', 'Error') | Out-Null
+        }
+        $state.Dropdown.Close()
+    }.GetNewClosure()
+
+    $renderGrid = {
+        $gridPanel.Controls.Clear()
+        $startYear = $state.BaseDecade - 1
+        $lblDecade.Text = "$($state.BaseDecade) - $($state.BaseDecade + 9)"
+
+        $cellW = 64; $cellH = 60
+        for ($i = 0; $i -lt 12; $i++) {
+            $year = $startYear + $i
+            $col = $i % 4
+            $row = [int]([Math]::Floor($i / 4))
+
+            $cell = New-Object System.Windows.Forms.Button
+            $cell.Text = "$year"
+            $cell.Size = New-Object System.Drawing.Size($cellW, $cellH)
+            $cell.Location = New-Object System.Drawing.Point(($col * $cellW), ($row * $cellH))
+            $cell.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+            $cell.FlatAppearance.BorderSize = 0
+            $cell.Font = New-Object System.Drawing.Font('Segoe UI', 11)
+            $cell.BackColor = [System.Drawing.Color]::White
+            $cell.Tag = $year
+            $cell.TabStop = $false
+
+            $isOutOfDecade = ($year -lt $state.BaseDecade -or $year -gt ($state.BaseDecade + 9))
+            $isSelected    = ($year -eq $state.SelectedYear)
+            $isOutOfRange  = ($year -lt $state.MinYear -or $year -gt $state.MaxYear)
+
+            if ($isSelected) {
+                $cell.BackColor = [System.Drawing.Color]::FromArgb(66, 153, 225)
+                $cell.ForeColor = [System.Drawing.Color]::White
+                $cell.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+            } elseif ($isOutOfDecade) {
+                $cell.ForeColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
+            } else {
+                $cell.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+            }
+
+            if ($isOutOfRange) {
+                $cell.Enabled = $false
+                $cell.ForeColor = [System.Drawing.Color]::FromArgb(210, 210, 210)
+            }
+
+            $cell.Add_Click($onYearClick)
+
+            $gridPanel.Controls.Add($cell)
+        }
+    }.GetNewClosure()
+
+    & $renderGrid
+
+    $btnPrev.Add_Click({
+        $newDecade = $state.BaseDecade - 10
+        if (($newDecade + 9) -ge $state.MinYear) {
+            $state.BaseDecade = $newDecade
+            & $renderGrid
+        }
+    }.GetNewClosure())
+
+    $btnNext.Add_Click({
+        $newDecade = $state.BaseDecade + 10
+        if ($newDecade -le $state.MaxYear) {
+            $state.BaseDecade = $newDecade
+            & $renderGrid
+        }
+    }.GetNewClosure())
+
+    # Hospeda o painel root no dropdown
+    $hostItem = New-Object System.Windows.Forms.ToolStripControlHost($root)
+    $hostItem.AutoSize = $false
+    $hostItem.Size     = New-Object System.Drawing.Size($popupW, $popupH)
+    $hostItem.Margin   = [System.Windows.Forms.Padding]::Empty
+    $hostItem.Padding  = [System.Windows.Forms.Padding]::Empty
+    [void]$dropdown.Items.Add($hostItem)
+
+    # Mostra logo abaixo do controle ancora
+    $dropdown.Show($AnchorControl, 0, $AnchorControl.Height)
+}
+
+$splashIconPath = Join-Path $scriptDir 'assets\icon.ico'
+Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 2500
+
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Planejamento de Ferias - Gerador'
@@ -63,14 +399,24 @@ $lblAno.Location = New-Object System.Drawing.Point(15, 55)
 $lblAno.Size = New-Object System.Drawing.Size(75, 22)
 $form.Controls.Add($lblAno)
 
-$nudAno = New-Object System.Windows.Forms.NumericUpDown
-$nudAno.Location = New-Object System.Drawing.Point(90, 53)
-$nudAno.Size = New-Object System.Drawing.Size(90, 22)
-$nudAno.Minimum = 2020
-$nudAno.Maximum = 2100
-$nudAno.Value = (Get-Date).Year
-$nudAno.TextAlign = 'Center'
-$form.Controls.Add($nudAno)
+$btnAno = New-Object System.Windows.Forms.Button
+$btnAno.Location = New-Object System.Drawing.Point(90, 53)
+$btnAno.Size = New-Object System.Drawing.Size(100, 24)
+$btnAno.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnAno.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+$btnAno.FlatAppearance.BorderSize = 1
+$btnAno.BackColor = [System.Drawing.Color]::White
+$btnAno.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+$btnAno.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+$btnAno.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$btnAno.Tag = (Get-Date).Year
+$btnAno.Text = "$((Get-Date).Year)   $([char]0x25BE)"
+$btnAno.Cursor = [System.Windows.Forms.Cursors]::Hand
+$form.Controls.Add($btnAno)
+
+$btnAno.Add_Click({
+    Show-YearPicker -AnchorControl $btnAno -CurrentYear ([int]$btnAno.Tag) -MinYear 2020 -MaxYear 2100
+})
 
 # ---- Planilha ----
 $lblXlsx = New-Object System.Windows.Forms.Label
@@ -134,7 +480,7 @@ $form.Controls.Add($pb)
 
 # ---- Rodape: "Criado por Carlos Seidl" ----
 $lblAutoria = New-Object System.Windows.Forms.Label
-$lblAutoria.Text = "Criado por $AUTOR_FIXO"
+$lblAutoria.Text = "Desenvolvido por $AUTOR_FIXO"
 $lblAutoria.Location = New-Object System.Drawing.Point(15, 295)
 $lblAutoria.Size = New-Object System.Drawing.Size(220, 20)
 $lblAutoria.Font = New-Object System.Drawing.Font('Segoe UI', 8, [System.Drawing.FontStyle]::Italic)
@@ -168,7 +514,7 @@ $btnGenerate.FlatAppearance.BorderSize = 0
 
 $btnGenerate.Add_Click({
     $autor = $AUTOR_FIXO
-    $ano   = [int]$nudAno.Value
+    $ano   = [int]$btnAno.Tag
     $xlsx  = $txtXlsx.Text.Trim()
 
     if (-not (Test-Path $xlsx)) {
@@ -180,7 +526,7 @@ $btnGenerate.Add_Click({
     $btnGenerate.Enabled = $false
     $btnClose.Enabled    = $false
     $btnBrowse.Enabled   = $false
-    $nudAno.Enabled      = $false
+    $btnAno.Enabled      = $false
     $txtXlsx.Enabled     = $false
     $chkPdf.Enabled      = $false
     $chkOpen.Enabled     = $false
@@ -226,7 +572,7 @@ $btnGenerate.Add_Click({
         $btnGenerate.Enabled = $true
         $btnClose.Enabled    = $true
         $btnBrowse.Enabled   = $true
-        $nudAno.Enabled      = $true
+        $btnAno.Enabled      = $true
         $txtXlsx.Enabled     = $true
         $chkPdf.Enabled      = $true
         $chkOpen.Enabled     = $true
