@@ -25,10 +25,16 @@
     Ano do planejamento (aparece no titulo do HTML, do Gantt e no <title>).
     Default: ano atual.
 
+.PARAMETER Pdf
+    Gera tambem uma versao PDF (Ferias-{timestamp}.pdf) usando Edge/Chrome
+    em modo headless. Necessario para SharePoint, que faz preview nativo de
+    PDF mas pode bloquear ou forcar download de HTML com scripts externos.
+
 .EXAMPLE
     .\executar.ps1                                  # ano atual, autor = usuario do Windows
     .\executar.ps1 -Ano 2027 -Autor "Carlos Seidl"
     .\executar.ps1 -OpenAfter                       # abre o HTML depois de gerar
+    .\executar.ps1 -Pdf                             # gera HTML + PDF (SharePoint)
 #>
 [CmdletBinding()]
 param(
@@ -41,7 +47,8 @@ param(
     [string]$LuaFilter = (Join-Path $PSScriptRoot 'assets\mermaid.lua'),
     [string]$Autor = $env:USERNAME,
     [int]$Ano = (Get-Date).Year,
-    [switch]$OpenAfter
+    [switch]$OpenAfter,
+    [switch]$Pdf
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,6 +110,73 @@ Pandoc nao ficou disponivel. Opcoes:
   2. Coloque o instalador em bin\pandoc-installer.msi e rode novamente.
   3. Instale manualmente de https://pandoc.org/installing.html.
 "@
+}
+
+function Find-EdgeOrChrome {
+    $candidates = @(
+        "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+        "${env:LocalAppData}\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "${env:LocalAppData}\Google\Chrome\Application\chrome.exe"
+    )
+    return $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
+function Convert-HtmlToPdf {
+    param(
+        [Parameter(Mandatory)][string]$HtmlPath,
+        [Parameter(Mandatory)][string]$PdfPath
+    )
+
+    $browser = Find-EdgeOrChrome
+    if (-not $browser) {
+        throw 'Microsoft Edge ou Google Chrome nao encontrado. Necessario para gerar PDF.'
+    }
+
+    # IMPORTANTE: Edge headless interpreta mal paths com espacos quando passados
+    # via Start-Process/call operator (OneDrive tem espaco no nome). Trabalhamos
+    # tudo em $env:TEMP (sem espaco) e copiamos os arquivos pro destino final.
+    $stamp     = [guid]::NewGuid().ToString('N').Substring(0, 8)
+    $tempBase  = Join-Path $env:TEMP "ferias-pdf-$stamp"
+    $tempUserDir = Join-Path $tempBase 'profile'
+    $tempHtml  = Join-Path $tempBase 'input.html'
+    $tempPdf   = Join-Path $tempBase 'output.pdf'
+    New-Item -ItemType Directory -Path $tempUserDir -Force | Out-Null
+
+    try {
+        # Copia o HTML pra um caminho sem espacos pra evitar problemas de quoting
+        Copy-Item -Path $HtmlPath -Destination $tempHtml -Force
+
+        $tempHtmlUri = (New-Object System.Uri($tempHtml)).AbsoluteUri
+
+        $browserArgs = @(
+            '--headless=new',
+            '--disable-gpu',
+            '--no-pdf-header-footer',
+            '--virtual-time-budget=15000',
+            "--user-data-dir=$tempUserDir",
+            "--print-to-pdf=$tempPdf",
+            $tempHtmlUri
+        )
+
+        Write-Host "Gerando PDF via $browser ..."
+        $proc = Start-Process -FilePath $browser -ArgumentList $browserArgs -Wait -PassThru -NoNewWindow
+
+        if ($proc.ExitCode -ne 0) {
+            throw "Browser headless retornou exit code $($proc.ExitCode)."
+        }
+        if (-not (Test-Path $tempPdf)) {
+            throw "PDF nao foi criado em $tempPdf (Edge nao escreveu o arquivo)."
+        }
+
+        # Move pro destino final (que pode ter espaco/acento)
+        Copy-Item -Path $tempPdf -Destination $PdfPath -Force
+    }
+    finally {
+        Remove-Item -Path $tempBase -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Ensure-Pandoc
@@ -291,4 +365,15 @@ if ($pandocExit -ne 0 -or -not (Test-Path $outHtml)) {
 }
 Write-Host "HTML gerado: $outHtml" -ForegroundColor Green
 
-if ($OpenAfter) { Start-Process $outHtml }
+# 7. PDF (opcional, para SharePoint)
+$outPdf = $null
+if ($Pdf) {
+    $outPdf = Join-Path $OutputDir "Ferias-$timestamp.pdf"
+    Convert-HtmlToPdf -HtmlPath $outHtml -PdfPath $outPdf
+    Write-Host "PDF gerado: $outPdf" -ForegroundColor Green
+}
+
+if ($OpenAfter) {
+    if ($Pdf -and $outPdf) { Start-Process $outPdf }
+    else { Start-Process $outHtml }
+}

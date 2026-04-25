@@ -34,7 +34,7 @@ if (-not (Test-Path $executar)) {
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Planejamento de Ferias - Gerador'
-$form.Size = New-Object System.Drawing.Size(500, 320)
+$form.Size = New-Object System.Drawing.Size(500, 345)
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
@@ -101,15 +101,23 @@ $form.Controls.Add($btnBrowse)
 
 # ---- Checkbox abrir apos gerar ----
 $chkOpen = New-Object System.Windows.Forms.CheckBox
-$chkOpen.Text = 'Abrir HTML apos gerar'
+$chkOpen.Text = 'Abrir apos gerar'
 $chkOpen.Location = New-Object System.Drawing.Point(90, 120)
 $chkOpen.Size = New-Object System.Drawing.Size(385, 22)
 $chkOpen.Checked = $true
 $form.Controls.Add($chkOpen)
 
+# ---- Checkbox gerar PDF (compativel com SharePoint) ----
+$chkPdf = New-Object System.Windows.Forms.CheckBox
+$chkPdf.Text = 'Gerar PDF tambem (para upload no SharePoint)'
+$chkPdf.Location = New-Object System.Drawing.Point(90, 145)
+$chkPdf.Size = New-Object System.Drawing.Size(385, 22)
+$chkPdf.Checked = $false
+$form.Controls.Add($chkPdf)
+
 # ---- Status ----
 $lblStatus = New-Object System.Windows.Forms.Label
-$lblStatus.Location = New-Object System.Drawing.Point(15, 160)
+$lblStatus.Location = New-Object System.Drawing.Point(15, 180)
 $lblStatus.Size = New-Object System.Drawing.Size(460, 22)
 $lblStatus.Text = 'Pronto. Confira os campos e clique em "Gerar Relatorio".'
 $lblStatus.ForeColor = [System.Drawing.Color]::Gray
@@ -117,7 +125,7 @@ $form.Controls.Add($lblStatus)
 
 # ---- Progress bar (marquee, visivel so durante o processamento) ----
 $pb = New-Object System.Windows.Forms.ProgressBar
-$pb.Location = New-Object System.Drawing.Point(15, 188)
+$pb.Location = New-Object System.Drawing.Point(15, 208)
 $pb.Size = New-Object System.Drawing.Size(460, 14)
 $pb.Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
 $pb.MarqueeAnimationSpeed = 30
@@ -127,7 +135,7 @@ $form.Controls.Add($pb)
 # ---- Rodape: "Criado por Carlos Seidl" ----
 $lblAutoria = New-Object System.Windows.Forms.Label
 $lblAutoria.Text = "Criado por $AUTOR_FIXO"
-$lblAutoria.Location = New-Object System.Drawing.Point(15, 250)
+$lblAutoria.Location = New-Object System.Drawing.Point(15, 275)
 $lblAutoria.Size = New-Object System.Drawing.Size(220, 20)
 $lblAutoria.Font = New-Object System.Drawing.Font('Segoe UI', 8, [System.Drawing.FontStyle]::Italic)
 $lblAutoria.ForeColor = [System.Drawing.Color]::Gray
@@ -136,7 +144,7 @@ $form.Controls.Add($lblAutoria)
 # ---- Botao Fechar ----
 $btnClose = New-Object System.Windows.Forms.Button
 $btnClose.Text = 'Fechar'
-$btnClose.Location = New-Object System.Drawing.Point(247, 245)
+$btnClose.Location = New-Object System.Drawing.Point(247, 270)
 $btnClose.Size = New-Object System.Drawing.Size(85, 32)
 $btnClose.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $btnClose.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -150,7 +158,7 @@ $form.Controls.Add($btnClose)
 # ---- Botao Gerar ----
 $btnGenerate = New-Object System.Windows.Forms.Button
 $btnGenerate.Text = 'Gerar Relatorio'
-$btnGenerate.Location = New-Object System.Drawing.Point(340, 245)
+$btnGenerate.Location = New-Object System.Drawing.Point(340, 270)
 $btnGenerate.Size = New-Object System.Drawing.Size(135, 32)
 $btnGenerate.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
 $btnGenerate.BackColor = [System.Drawing.Color]::FromArgb(66, 153, 225)
@@ -174,29 +182,38 @@ $btnGenerate.Add_Click({
     $btnBrowse.Enabled   = $false
     $nudAno.Enabled      = $false
     $txtXlsx.Enabled     = $false
+    $chkPdf.Enabled      = $false
+    $chkOpen.Enabled     = $false
     $form.UseWaitCursor  = $true
     $pb.Visible          = $true
     $pb.MarqueeAnimationSpeed = 30
-    $lblStatus.Text = 'Gerando relatorio... Aguarde (primeira execucao pode demorar se precisar instalar o Pandoc).'
+    $msgBase = if ($chkPdf.Checked) { 'Gerando relatorio HTML + PDF...' } else { 'Gerando relatorio...' }
+    $lblStatus.Text = "$msgBase Aguarde (primeira execucao pode demorar)."
     $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(43, 108, 176)
     $form.Refresh()
     [System.Windows.Forms.Application]::DoEvents()
 
     try {
-        & $executar -XlsxPath $xlsx -Autor $autor -Ano $ano *>&1 | Out-Null
+        & $executar -XlsxPath $xlsx -Autor $autor -Ano $ano -Pdf:$chkPdf.Checked *>&1 | Out-Null
 
-        $latest = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.html' -ErrorAction SilentlyContinue |
-                  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        # Procura o ultimo HTML gerado; se PDF marcado, prefere abrir o PDF
+        $latestHtml = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.html' -ErrorAction SilentlyContinue |
+                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $latestPdf  = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.pdf'  -ErrorAction SilentlyContinue |
+                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
-        if (-not $latest) {
+        if (-not $latestHtml) {
             throw "Script rodou mas nenhum HTML foi encontrado em:`n$resultsDir"
         }
 
-        $lblStatus.Text = "Sucesso! Arquivo gerado: $($latest.Name)"
+        $generatedNames = @($latestHtml.Name)
+        if ($chkPdf.Checked -and $latestPdf) { $generatedNames += $latestPdf.Name }
+        $lblStatus.Text = "Sucesso! Arquivos gerados: " + ($generatedNames -join ', ')
         $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(47, 133, 90)
 
         if ($chkOpen.Checked) {
-            Start-Process $latest.FullName
+            $toOpen = if ($chkPdf.Checked -and $latestPdf) { $latestPdf.FullName } else { $latestHtml.FullName }
+            Start-Process $toOpen
         }
     }
     catch {
@@ -211,6 +228,8 @@ $btnGenerate.Add_Click({
         $btnBrowse.Enabled   = $true
         $nudAno.Enabled      = $true
         $txtXlsx.Enabled     = $true
+        $chkPdf.Enabled      = $true
+        $chkOpen.Enabled     = $true
         $pb.Visible          = $false
         $pb.MarqueeAnimationSpeed = 0
         $form.UseWaitCursor  = $false
