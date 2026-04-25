@@ -42,6 +42,11 @@ $form.MinimizeBox = $true
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $form.BackColor = [System.Drawing.Color]::White
 
+$iconPath = Join-Path $scriptDir 'assets\icon.ico'
+if (Test-Path $iconPath) {
+    $form.Icon = New-Object System.Drawing.Icon($iconPath)
+}
+
 # ---- Titulo ----
 $lblTitle = New-Object System.Windows.Forms.Label
 $lblTitle.Text = 'Planejamento de Ferias'

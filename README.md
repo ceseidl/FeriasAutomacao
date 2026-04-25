@@ -44,7 +44,22 @@ ferias-automacao/
     mermaid.lua           -> filtro Pandoc: ```mermaid``` -> <div class="mermaid">
   bin/
     pandoc-installer.msi  -> instalador offline do Pandoc (auto-instala)
+  assets/
+    icon.ico              -> icone do app (palmeira em fundo azul)
+    generate-icon.ps1     -> regenera o icon.ico (rodar so se mudar o design)
 ```
+
+---
+
+## Personalizar o icone
+
+O `assets/icon.ico` e usado pelo Form (barra de titulo + taskbar) e pelo
+atalho `Gerar Relatorio.lnk`. Pra trocar o design:
+
+1. Editar `assets/generate-icon.ps1` (cores, formas, tamanhos)
+2. Rodar: `.\assets\generate-icon.ps1`
+3. Pra atualizar o icone do atalho, recriar o `.lnk` com a flag `-IconLocation`
+   apontando pra `assets\icon.ico,0`
 
 ---
 

@@ -17,6 +17,20 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# Win32 helpers para capturar a janela exatamente (sem sangramento)
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+}
+"@
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $outPath   = Join-Path $scriptDir 'screenshot.png'
 $xlsxDemo  = Join-Path (Split-Path -Parent $scriptDir) 'ferias-2026.xlsx'
@@ -33,6 +47,11 @@ $form.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $form.BackColor = [System.Drawing.Color]::White
 $form.TopMost = $true
 $form.ShowInTaskbar = $false
+
+$iconPath = Join-Path (Split-Path -Parent $scriptDir) 'assets\icon.ico'
+if (Test-Path $iconPath) {
+    $form.Icon = New-Object System.Drawing.Icon($iconPath)
+}
 
 $lblTitle = New-Object System.Windows.Forms.Label
 $lblTitle.Text = 'Planejamento de Ferias'
@@ -142,10 +161,18 @@ $form.BringToFront()
     Start-Sleep -Milliseconds 50
 }
 
-$bounds = $form.Bounds
-$bmp    = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
-$gfx    = [System.Drawing.Graphics]::FromImage($bmp)
-$gfx.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+# GetWindowRect retorna os bounds reais (incluindo qualquer ajuste do Win11)
+$rect = New-Object Win32+RECT
+[void][Win32]::GetWindowRect($form.Handle, [ref]$rect)
+$w = $rect.Right - $rect.Left
+$h = $rect.Bottom - $rect.Top
+
+$bmp = New-Object System.Drawing.Bitmap($w, $h)
+$gfx = [System.Drawing.Graphics]::FromImage($bmp)
+$gfx.CopyFromScreen(
+    (New-Object System.Drawing.Point($rect.Left, $rect.Top)),
+    [System.Drawing.Point]::Empty,
+    (New-Object System.Drawing.Size($w, $h)))
 $bmp.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
 
 $gfx.Dispose()
