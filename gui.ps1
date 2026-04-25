@@ -24,6 +24,35 @@ $executar    = Join-Path $scriptDir 'executar.ps1'
 $xlsxDefault = Join-Path $scriptDir 'Ferias-template.xlsx'
 $resultsDir  = Join-Path $scriptDir 'results'
 
+# ============================================================
+# Persistencia da "Pasta de saida" no registry do usuario.
+# A escolha do usuario fica guardada em HKCU para que a
+# proxima execucao ja abra com a pasta preferida preenchida.
+# ============================================================
+$REGISTRY_KEY   = 'HKCU:\Software\FeriasAutomacao'
+$REGISTRY_VALUE = 'OutputDir'
+
+function Get-OutputDirPreference {
+    param([string]$Default)
+    try {
+        $val = (Get-ItemProperty -Path $REGISTRY_KEY -Name $REGISTRY_VALUE -ErrorAction Stop).$REGISTRY_VALUE
+        if ($val) { return $val }
+    } catch {}
+    return $Default
+}
+
+function Set-OutputDirPreference {
+    param([string]$Value)
+    try {
+        if (-not (Test-Path $REGISTRY_KEY)) {
+            New-Item -Path $REGISTRY_KEY -Force | Out-Null
+        }
+        Set-ItemProperty -Path $REGISTRY_KEY -Name $REGISTRY_VALUE -Value $Value -Type String
+    } catch {
+        # persistencia e best-effort - nao quebra o fluxo se falhar
+    }
+}
+
 if (-not (Test-Path $executar)) {
     [System.Windows.Forms.MessageBox]::Show(
         "executar.ps1 nao encontrado em:`n$scriptDir",
@@ -370,7 +399,7 @@ Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPat
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Planejamento de Ferias - Gerador'
-$form.Size = New-Object System.Drawing.Size(580, 365)
+$form.Size = New-Object System.Drawing.Size(580, 400)
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
@@ -445,10 +474,45 @@ $btnBrowse.Add_Click({
 })
 $form.Controls.Add($btnBrowse)
 
+# ---- Pasta de saida ----
+# Os arquivos sempre vao para esta pasta, sobrescrevendo a execucao anterior.
+# A escolha do usuario fica persistida em HKCU para a proxima execucao.
+$lblOutDir = New-Object System.Windows.Forms.Label
+$lblOutDir.Text = 'Pasta de saida:'
+$lblOutDir.Location = New-Object System.Drawing.Point(15, 121)
+$lblOutDir.Size = New-Object System.Drawing.Size(75, 22)
+$form.Controls.Add($lblOutDir)
+
+$txtOutDir = New-Object System.Windows.Forms.TextBox
+$txtOutDir.Location = New-Object System.Drawing.Point(90, 119)
+$txtOutDir.Size = New-Object System.Drawing.Size(375, 22)
+$txtOutDir.Text = (Get-OutputDirPreference -Default $resultsDir)
+$form.Controls.Add($txtOutDir)
+
+$btnBrowseOut = New-Object System.Windows.Forms.Button
+$btnBrowseOut.Text = 'Procurar...'
+$btnBrowseOut.Location = New-Object System.Drawing.Point(470, 117)
+$btnBrowseOut.Size = New-Object System.Drawing.Size(85, 26)
+$btnBrowseOut.Add_Click({
+    $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dlg.Description = 'Escolha a pasta onde os arquivos serao gerados (Ferias.html, Ferias.md, Ferias.xlsx).'
+    $dlg.ShowNewFolderButton = $true
+    if ($txtOutDir.Text -and (Test-Path $txtOutDir.Text)) {
+        $dlg.SelectedPath = $txtOutDir.Text
+    } else {
+        $dlg.SelectedPath = $scriptDir
+    }
+    if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $txtOutDir.Text = $dlg.SelectedPath
+        Set-OutputDirPreference -Value $dlg.SelectedPath
+    }
+})
+$form.Controls.Add($btnBrowseOut)
+
 # ---- Checkbox abrir apos gerar ----
 $chkOpen = New-Object System.Windows.Forms.CheckBox
 $chkOpen.Text = 'Abrir apos gerar'
-$chkOpen.Location = New-Object System.Drawing.Point(90, 120)
+$chkOpen.Location = New-Object System.Drawing.Point(90, 152)
 $chkOpen.Size = New-Object System.Drawing.Size(465, 22)
 $chkOpen.Checked = $true
 $form.Controls.Add($chkOpen)
@@ -456,14 +520,14 @@ $form.Controls.Add($chkOpen)
 # ---- Checkbox gerar PDF (compativel com SharePoint) ----
 $chkPdf = New-Object System.Windows.Forms.CheckBox
 $chkPdf.Text = 'Gerar PDF tambem (para upload no SharePoint)'
-$chkPdf.Location = New-Object System.Drawing.Point(90, 145)
+$chkPdf.Location = New-Object System.Drawing.Point(90, 177)
 $chkPdf.Size = New-Object System.Drawing.Size(465, 22)
 $chkPdf.Checked = $false
 $form.Controls.Add($chkPdf)
 
 # ---- Status (multilinha: mensagens longas como "Sucesso! Arquivos gerados: ..." podem precisar de 2 linhas) ----
 $lblStatus = New-Object System.Windows.Forms.Label
-$lblStatus.Location = New-Object System.Drawing.Point(15, 178)
+$lblStatus.Location = New-Object System.Drawing.Point(15, 210)
 $lblStatus.Size = New-Object System.Drawing.Size(540, 36)
 $lblStatus.Text = 'Pronto. Confira os campos e clique em "Gerar Relatorio".'
 $lblStatus.ForeColor = [System.Drawing.Color]::Gray
@@ -471,7 +535,7 @@ $form.Controls.Add($lblStatus)
 
 # ---- Progress bar (marquee, visivel so durante o processamento) ----
 $pb = New-Object System.Windows.Forms.ProgressBar
-$pb.Location = New-Object System.Drawing.Point(15, 220)
+$pb.Location = New-Object System.Drawing.Point(15, 252)
 $pb.Size = New-Object System.Drawing.Size(540, 14)
 $pb.Style = [System.Windows.Forms.ProgressBarStyle]::Marquee
 $pb.MarqueeAnimationSpeed = 30
@@ -481,7 +545,7 @@ $form.Controls.Add($pb)
 # ---- Rodape: "Criado por Carlos Seidl" ----
 $lblAutoria = New-Object System.Windows.Forms.Label
 $lblAutoria.Text = "Desenvolvido por $AUTOR_FIXO"
-$lblAutoria.Location = New-Object System.Drawing.Point(15, 295)
+$lblAutoria.Location = New-Object System.Drawing.Point(15, 327)
 $lblAutoria.Size = New-Object System.Drawing.Size(220, 20)
 $lblAutoria.Font = New-Object System.Drawing.Font('Segoe UI', 8, [System.Drawing.FontStyle]::Italic)
 $lblAutoria.ForeColor = [System.Drawing.Color]::Gray
@@ -490,7 +554,7 @@ $form.Controls.Add($lblAutoria)
 # ---- Botao Fechar ----
 $btnClose = New-Object System.Windows.Forms.Button
 $btnClose.Text = 'Fechar'
-$btnClose.Location = New-Object System.Drawing.Point(327, 290)
+$btnClose.Location = New-Object System.Drawing.Point(327, 322)
 $btnClose.Size = New-Object System.Drawing.Size(85, 32)
 $btnClose.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $btnClose.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -504,7 +568,7 @@ $form.Controls.Add($btnClose)
 # ---- Botao Gerar ----
 $btnGenerate = New-Object System.Windows.Forms.Button
 $btnGenerate.Text = 'Gerar Relatorio'
-$btnGenerate.Location = New-Object System.Drawing.Point(420, 290)
+$btnGenerate.Location = New-Object System.Drawing.Point(420, 322)
 $btnGenerate.Size = New-Object System.Drawing.Size(135, 32)
 $btnGenerate.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
 $btnGenerate.BackColor = [System.Drawing.Color]::FromArgb(66, 153, 225)
@@ -513,9 +577,10 @@ $btnGenerate.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnGenerate.FlatAppearance.BorderSize = 0
 
 $btnGenerate.Add_Click({
-    $autor = $AUTOR_FIXO
-    $ano   = [int]$btnAno.Tag
-    $xlsx  = $txtXlsx.Text.Trim()
+    $autor     = $AUTOR_FIXO
+    $ano       = [int]$btnAno.Tag
+    $xlsx      = $txtXlsx.Text.Trim()
+    $outputDir = $txtOutDir.Text.Trim()
 
     if (-not (Test-Path $xlsx)) {
         [System.Windows.Forms.MessageBox]::Show("Planilha nao encontrada:`n$xlsx",
@@ -523,15 +588,26 @@ $btnGenerate.Add_Click({
         return
     }
 
-    $btnGenerate.Enabled = $false
-    $btnClose.Enabled    = $false
-    $btnBrowse.Enabled   = $false
-    $btnAno.Enabled      = $false
-    $txtXlsx.Enabled     = $false
-    $chkPdf.Enabled      = $false
-    $chkOpen.Enabled     = $false
-    $form.UseWaitCursor  = $true
-    $pb.Visible          = $true
+    if ([string]::IsNullOrWhiteSpace($outputDir)) {
+        [System.Windows.Forms.MessageBox]::Show('Informe a pasta de saida.',
+            'Erro', 'OK', 'Error') | Out-Null
+        return
+    }
+
+    # Persiste a escolha do usuario para futuras execucoes (best-effort).
+    Set-OutputDirPreference -Value $outputDir
+
+    $btnGenerate.Enabled  = $false
+    $btnClose.Enabled     = $false
+    $btnBrowse.Enabled    = $false
+    $btnBrowseOut.Enabled = $false
+    $btnAno.Enabled       = $false
+    $txtXlsx.Enabled      = $false
+    $txtOutDir.Enabled    = $false
+    $chkPdf.Enabled       = $false
+    $chkOpen.Enabled      = $false
+    $form.UseWaitCursor   = $true
+    $pb.Visible           = $true
     $pb.MarqueeAnimationSpeed = 30
     $msgBase = if ($chkPdf.Checked) { 'Gerando relatorio HTML + PDF...' } else { 'Gerando relatorio...' }
     $lblStatus.Text = "$msgBase Aguarde (primeira execucao pode demorar)."
@@ -540,28 +616,25 @@ $btnGenerate.Add_Click({
     [System.Windows.Forms.Application]::DoEvents()
 
     try {
-        & $executar -XlsxPath $xlsx -Autor $autor -Ano $ano -Pdf:$chkPdf.Checked *>&1 | Out-Null
+        & $executar -XlsxPath $xlsx -Autor $autor -Ano $ano -OutputDir $outputDir -Pdf:$chkPdf.Checked *>&1 | Out-Null
 
-        # Procura o ultimo HTML gerado; se PDF marcado, prefere abrir o PDF.
-        # Cada execucao cria results\Ferias-{timestamp}\ com seus 3-4 arquivos
-        # dentro, entao buscamos recursivamente (e -Recurse tambem cobre
-        # arquivos antigos que ficaram soltos no formato anterior).
-        $latestHtml = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.html' -Recurse -File -ErrorAction SilentlyContinue |
-                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $latestPdf  = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.pdf'  -Recurse -File -ErrorAction SilentlyContinue |
-                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        # Os arquivos sao SEMPRE gerados na pasta escolhida com nomes fixos
+        # (Ferias.html, Ferias.md, Ferias.xlsx, Ferias.pdf), sobrescrevendo
+        # a execucao anterior. Procuramos diretamente pelos nomes esperados.
+        $expectedHtml = Join-Path $outputDir 'Ferias.html'
+        $expectedPdf  = Join-Path $outputDir 'Ferias.pdf'
 
-        if (-not $latestHtml) {
-            throw "Script rodou mas nenhum HTML foi encontrado em:`n$resultsDir"
+        if (-not (Test-Path $expectedHtml)) {
+            throw "Script rodou mas o HTML nao foi encontrado em:`n$expectedHtml"
         }
 
-        $generatedNames = @($latestHtml.Name)
-        if ($chkPdf.Checked -and $latestPdf) { $generatedNames += $latestPdf.Name }
-        $lblStatus.Text = "Sucesso! Arquivos gerados: " + ($generatedNames -join ', ')
+        $generatedNames = @('Ferias.html')
+        if ($chkPdf.Checked -and (Test-Path $expectedPdf)) { $generatedNames += 'Ferias.pdf' }
+        $lblStatus.Text = "Sucesso! Arquivos gerados em '$outputDir': " + ($generatedNames -join ', ')
         $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(47, 133, 90)
 
         if ($chkOpen.Checked) {
-            $toOpen = if ($chkPdf.Checked -and $latestPdf) { $latestPdf.FullName } else { $latestHtml.FullName }
+            $toOpen = if ($chkPdf.Checked -and (Test-Path $expectedPdf)) { $expectedPdf } else { $expectedHtml }
             Start-Process $toOpen
         }
     }
@@ -572,16 +645,18 @@ $btnGenerate.Add_Click({
             'Erro ao gerar relatorio', 'OK', 'Error') | Out-Null
     }
     finally {
-        $btnGenerate.Enabled = $true
-        $btnClose.Enabled    = $true
-        $btnBrowse.Enabled   = $true
-        $btnAno.Enabled      = $true
-        $txtXlsx.Enabled     = $true
-        $chkPdf.Enabled      = $true
-        $chkOpen.Enabled     = $true
-        $pb.Visible          = $false
+        $btnGenerate.Enabled  = $true
+        $btnClose.Enabled     = $true
+        $btnBrowse.Enabled    = $true
+        $btnBrowseOut.Enabled = $true
+        $btnAno.Enabled       = $true
+        $txtXlsx.Enabled      = $true
+        $txtOutDir.Enabled    = $true
+        $chkPdf.Enabled       = $true
+        $chkOpen.Enabled      = $true
+        $pb.Visible           = $false
         $pb.MarqueeAnimationSpeed = 0
-        $form.UseWaitCursor  = $false
+        $form.UseWaitCursor   = $false
     }
 })
 $form.Controls.Add($btnGenerate)

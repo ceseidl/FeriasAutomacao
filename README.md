@@ -21,16 +21,21 @@ Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
    - **Gantt** (Mermaid, gerado dinamicamente)
    - **Rodape de autoria** (`Criado e compilado por <Autor> em dd/MM/yyyy as HH:mm`)
 3. Roda **Pandoc** para gerar o HTML estilizado (CSS embutido + script do Mermaid no `<head>`)
-4. Cada execucao gera uma pasta nova com timestamp, contendo o relatorio
-   em multiplos formatos + a planilha-fonte (snapshot), preservando historico:
+4. Os arquivos sao gerados sempre na **mesma pasta** (`results/` por padrao,
+   ou outra que voce escolher na GUI), com nomes fixos. Cada execucao
+   **sobrescreve** a anterior:
 
 ```
-results/Ferias-yyyyMMdd-HHmmss/
-  Ferias-yyyyMMdd-HHmmss.md     <- relatorio em Markdown
-  Ferias-yyyyMMdd-HHmmss.html   <- relatorio em HTML (CSS+Mermaid embutido)
-  Ferias-yyyyMMdd-HHmmss.xlsx   <- copia da planilha que gerou o relatorio
-  Ferias-yyyyMMdd-HHmmss.pdf    <- (opcional, com -Pdf)
+<pasta-de-saida>/
+  Ferias.md     <- relatorio em Markdown
+  Ferias.html   <- relatorio em HTML (CSS+Mermaid embutido)
+  Ferias.xlsx   <- copia da planilha que gerou o relatorio
+  Ferias.pdf    <- (opcional, com -Pdf)
 ```
+
+> **GUI:** a pasta escolhida pelo usuario fica persistida em
+> `HKCU:\Software\FeriasAutomacao\OutputDir`, entao da proxima vez a
+> janela ja abre apontando pra ela.
 
 ---
 
@@ -151,7 +156,7 @@ Ferias-template.xlsx
    template.md ---- substitui <!-- DASHBOARD -->, <!-- CRONOGRAMA -->,
        |             <!-- GANTT -->, <!-- AUTOR --> e <!-- ANO -->
        v
-   results/Ferias-{timestamp}/Ferias-{timestamp}.md
+   <pasta-de-saida>/Ferias.md
        |
        v
      Pandoc ---- --standalone --embed-resources
@@ -159,8 +164,8 @@ Ferias-template.xlsx
        |          --include-in-header assets/header.html
        |          --lua-filter assets/mermaid.lua
        v
-   results/Ferias-{timestamp}/Ferias-{timestamp}.html  (HTML standalone)
-   results/Ferias-{timestamp}/Ferias-{timestamp}.xlsx  (copia da planilha-fonte)
+   <pasta-de-saida>/Ferias.html  (HTML standalone)
+   <pasta-de-saida>/Ferias.xlsx  (copia da planilha-fonte)
 ```
 
 Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa de internet ao **abrir** o HTML.

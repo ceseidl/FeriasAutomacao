@@ -1,20 +1,19 @@
 ﻿#requires -Version 5.1
 <#
 .SYNOPSIS
-    Gera uma pasta results\Ferias-{timestamp}\ contendo .md, .html e a copia
-    da planilha (.xlsx) usada como entrada.
+    Gera Ferias.md, Ferias.html e Ferias.xlsx (snapshot da planilha) na
+    pasta de saida configurada. Cada execucao sobrescreve os anteriores.
 
 .DESCRIPTION
     Le a planilha (aba "Ferias"), preenche o template.md com dashboard + cronograma + gantt,
     e roda pandoc pra gerar o HTML estilizado (CSS + Mermaid embutido).
-    Cada execucao cria a sua propria pasta com timestamp (yyyyMMdd-HHmmss),
-    contendo:
-        results\Ferias-{ts}\Ferias-{ts}.md     <- relatorio em Markdown
-        results\Ferias-{ts}\Ferias-{ts}.html   <- relatorio em HTML
-        results\Ferias-{ts}\Ferias-{ts}.xlsx   <- snapshot da planilha-fonte
-        results\Ferias-{ts}\Ferias-{ts}.pdf    <- (opcional, com -Pdf)
-    Assim cada execucao fica auto-contida (relatorio + base que o gerou) e o
-    historico nao se mistura.
+    A pasta de saida e fixa entre execucoes (default: .\results, ou o que a GUI
+    salvou no registry). Os arquivos tem nomes fixos e sao sobrescritos a cada
+    execucao - assim a pasta nao acumula historico:
+        $OutputDir\Ferias.md     <- relatorio em Markdown
+        $OutputDir\Ferias.html   <- relatorio em HTML (CSS+Mermaid embutido)
+        $OutputDir\Ferias.xlsx   <- copia da planilha-fonte usada
+        $OutputDir\Ferias.pdf    <- (opcional, com -Pdf)
 
 .PARAMETER XlsxPath
     Caminho para a planilha. Default: .\Ferias-template.xlsx
@@ -341,29 +340,23 @@ $md = $template.Replace('<!-- DASHBOARD -->', $dashboardTable).
 
 if (-not (Test-Path $OutputDir)) { New-Item -ItemType Directory -Path $OutputDir | Out-Null }
 
-# Cada execucao tem a sua propria subpasta Ferias-{timestamp}/, contendo
-# os 3 (ou 4) arquivos gerados juntos: .md, .html, .xlsx (snapshot da
-# planilha que foi usada como entrada) e opcionalmente .pdf. Assim o
-# usuario consegue arquivar/compartilhar o relatorio inteiro mais a base
-# de dados que o gerou, sem misturar com outras execucoes.
-$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$runDir = Join-Path $OutputDir "Ferias-$timestamp"
-New-Item -ItemType Directory -Path $runDir | Out-Null
-$outMd   = Join-Path $runDir "Ferias-$timestamp.md"
-$outHtml = Join-Path $runDir "Ferias-$timestamp.html"
-$outXlsx = Join-Path $runDir "Ferias-$timestamp.xlsx"
-Write-Host "Timestamp desta execucao: $timestamp"
-Write-Host "Pasta de saida: $runDir"
+# Nomes fixos: cada execucao SOBRESCREVE a anterior. Sem timestamp, sem
+# subpastas. Assim a pasta de saida fica enxuta com sempre o relatorio
+# "atual" e a planilha-fonte que o gerou.
+$outMd   = Join-Path $OutputDir 'Ferias.md'
+$outHtml = Join-Path $OutputDir 'Ferias.html'
+$outXlsx = Join-Path $OutputDir 'Ferias.xlsx'
+Write-Host "Pasta de saida: $OutputDir"
 
 # Copia da planilha de entrada (snapshot do que gerou o relatorio).
 # Se rodou com -CsvPath, a fonte eh CSV; senao eh XlsxPath. Em qualquer
 # caso, copia preservando a extensao original pra a saida ser auto-
-# explicativa (Ferias-{ts}.xlsx pra Excel, Ferias-{ts}.csv pra CSV).
+# explicativa (Ferias.xlsx pra Excel, Ferias.csv pra CSV).
 $srcData = if ($CsvPath) { $CsvPath } else { $XlsxPath }
 if ($srcData -and (Test-Path $srcData)) {
     $srcExt = [System.IO.Path]::GetExtension($srcData)
     if ([string]::IsNullOrEmpty($srcExt)) { $srcExt = '.xlsx' }
-    $outXlsx = Join-Path $runDir ("Ferias-$timestamp" + $srcExt)
+    $outXlsx = Join-Path $OutputDir ('Ferias' + $srcExt)
     Copy-Item -Path $srcData -Destination $outXlsx -Force
     Write-Host "Planilha-fonte copiada: $outXlsx"
 } else {
@@ -414,7 +407,7 @@ Write-Host "HTML gerado: $outHtml" -ForegroundColor Green
 # 7. PDF (opcional, para SharePoint)
 $outPdf = $null
 if ($Pdf) {
-    $outPdf = Join-Path $runDir "Ferias-$timestamp.pdf"
+    $outPdf = Join-Path $OutputDir 'Ferias.pdf'
     Convert-HtmlToPdf -HtmlPath $outHtml -PdfPath $outPdf
     Write-Host "PDF gerado: $outPdf" -ForegroundColor Green
 }

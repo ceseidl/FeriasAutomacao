@@ -8,6 +8,14 @@ Atualiza docs/MANUAL.docx in-place para refletir as mudancas do v1.0.0:
      virou o proprio .docx).
   5. Adiciona instrucoes de instalacao via MSI (com descricao do dialogo
      de selecao de atalhos) e renumera as subsecoes 1.x.
+  6. Atualiza a descricao da aba Ferias pra refletir as 5 abas atuais
+     (Ferias + Squads + Integrantes + Status + Instrucoes) e renomeia
+     ferias-2026.xlsx -> Ferias-template.xlsx em todo o documento.
+  7. Atualiza a saida pra pasta unica configuravel com nomes fixos
+     (Ferias.md / Ferias.html / Ferias.xlsx / Ferias.pdf) que sobrescreve
+     a execucao anterior. Sem subpastas com timestamp.
+  8. Insere descricao do controle "Pasta de saida" da GUI (com
+     persistencia em HKCU) logo apos o item do controle "Ano".
 
 Idempotente: rodar mais de uma vez nao duplica conteudo.
 """
@@ -286,64 +294,115 @@ for p in doc.paragraphs:
             swaps += 1
 print(f'Renomeacao da planilha: {swaps} run(s) atualizados.')
 
-# ---------- 7) Saida em pasta com timestamp (results\Ferias-{ts}\) ----------
-# Antes os arquivos saiam soltos em results\. Agora cada execucao tem a
-# sua subpasta results\Ferias-{ts}\ com .md, .html e .xlsx (snapshot da
-# planilha) dentro. Atualiza:
-#   - paragrafo descritivo "Cada execucao cria arquivos com timestamp..."
+# ---------- 7) Saida em pasta unica com nomes fixos (sobrescreve a anterior) ----------
+# REGRA NOVA: sem subpasta com timestamp e sem timestamp no nome. Os arquivos
+# vao sempre pra mesma pasta (results\ por padrao, ou outra escolhida pelo
+# usuario na GUI), com nomes fixos: Ferias.md, Ferias.html, Ferias.xlsx
+# (e Ferias.pdf se a opcao estiver marcada). Cada execucao sobrescreve a
+# anterior.
+#
+# A escolha do usuario na GUI fica persistida em
+# HKCU:\Software\FeriasAutomacao\OutputDir, entao na proxima abertura a
+# janela ja vem apontando pra pasta preferida.
+#
+# Atualiza (idempotente, aceitando como entrada o estado atual OU o estado
+# antigo "arquivos soltos com timestamp"):
+#   - paragrafo descritivo
 #   - bloco Source Code com a estrutura de pastas
-#   - referencia em "Subir o arquivo Ferias-{timestamp}.pdf"
-old_desc = 'Cada execucao cria arquivos com timestamp na pasta results\\:'
-new_desc = ('Cada execucao cria uma subpasta results\\Ferias-{timestamp}\\ '
-            'com o relatorio em multiplos formatos + a planilha-fonte:')
+#   - referencia em "Subir o arquivo ... na biblioteca do SharePoint"
+
+novo_desc = ('Os arquivos sao gerados na pasta de saida configurada na GUI '
+             '(padrao: results\\) e cada execucao sobrescreve a anterior. '
+             'A escolha do usuario fica persistida pra proxima execucao:')
+descs_antigos = {
+    'Cada execucao cria arquivos com timestamp na pasta results\\:',
+    ('Cada execucao cria uma subpasta results\\Ferias-{timestamp}\\ '
+     'com o relatorio em multiplos formatos + a planilha-fonte:'),
+}
 for p in doc.paragraphs:
-    if p.text.strip() == old_desc:
+    if p.text.strip() in descs_antigos or p.text.strip() == novo_desc:
         for r in list(p.runs):
             r.text = ''
         if p.runs:
-            p.runs[0].text = new_desc
+            p.runs[0].text = novo_desc
         else:
-            p.add_run(new_desc)
+            p.add_run(novo_desc)
         break
 
-# Bloco Source Code (a estrutura literal). Reescrevemos pra refletir o
-# novo layout. Procura pelo paragrafo Source Code que comeca com 'results\'
-# e ainda mostra arquivos soltos sem subpasta.
-new_tree = (
-    'results\\\n'
-    '  Ferias-20260425-143012\\\n'
-    '    Ferias-20260425-143012.md     <- versao Markdown (texto puro)\n'
-    '    Ferias-20260425-143012.html   <- versao HTML formatada (interativa)\n'
-    '    Ferias-20260425-143012.xlsx   <- copia da planilha que gerou o relatorio\n'
-    '    Ferias-20260425-143012.pdf    <- (opcional, com a opcao "Gerar PDF tambem" marcada)\n'
-    '  Ferias-20260425-150133\\         <- proxima execucao, em nova subpasta\n'
-    '    ...'
+# Bloco Source Code: troca pelo novo layout flat (4 arquivos com nome fixo).
+nova_arvore = (
+    '<pasta-de-saida>\\\n'
+    '  Ferias.md     <- versao Markdown (texto puro)\n'
+    '  Ferias.html   <- versao HTML formatada (interativa)\n'
+    '  Ferias.xlsx   <- copia da planilha que gerou o relatorio\n'
+    '  Ferias.pdf    <- (opcional, com a opcao "Gerar PDF tambem" marcada)'
 )
 for p in doc.paragraphs:
-    if p.style.name == 'Source Code' and p.text.lstrip().startswith('results\\') \
-            and 'Ferias-20260425-143012\\' not in p.text:
-        # zera todos os runs e poe o novo conteudo no primeiro
+    if p.style.name == 'Source Code' \
+            and (p.text.lstrip().startswith('results\\') or p.text.lstrip().startswith('<pasta-de-saida>\\')) \
+            and 'Ferias.html' not in p.text:
         for r in list(p.runs):
             r.text = ''
         if p.runs:
-            p.runs[0].text = new_tree
+            p.runs[0].text = nova_arvore
         else:
-            p.add_run(new_tree)
+            p.add_run(nova_arvore)
         break
 
-# "Subir o arquivo Ferias-{timestamp}.pdf na biblioteca do SharePoint"
-old_share = 'Subir o arquivo Ferias-{timestamp}.pdf na biblioteca do SharePoint'
-new_share = ('Subir o arquivo Ferias-{timestamp}.pdf de dentro da subpasta '
-             'Ferias-{timestamp}\\ na biblioteca do SharePoint')
+# "Subir o arquivo Ferias.pdf na biblioteca do SharePoint" (sem timestamp).
+novo_share = 'Subir o arquivo Ferias.pdf da pasta de saida na biblioteca do SharePoint'
+shares_antigos = {
+    'Subir o arquivo Ferias-{timestamp}.pdf na biblioteca do SharePoint',
+    ('Subir o arquivo Ferias-{timestamp}.pdf de dentro da subpasta '
+     'Ferias-{timestamp}\\ na biblioteca do SharePoint'),
+}
 for p in doc.paragraphs:
-    if p.text.strip() == old_share:
+    if p.text.strip() in shares_antigos or p.text.strip() == novo_share:
         for r in list(p.runs):
             r.text = ''
         if p.runs:
-            p.runs[0].text = new_share
+            p.runs[0].text = novo_share
         else:
-            p.add_run(new_share)
+            p.add_run(novo_share)
         break
+
+# ---------- 8) Controle "Pasta de saida" + persistencia em HKCU ----------
+# Insere um paragrafo Compact descrevendo o novo controle da GUI logo
+# apos o item "Ano - ano que aparece no titulo...". Idempotente: pula se
+# ja existe.
+desc_pasta = (
+    'Pasta de saida - pasta onde os arquivos serao gerados (padrao: '
+    'results\\). Clicar em Procurar... abre um seletor de pasta; a '
+    'escolha fica salva em HKCU:\\Software\\FeriasAutomacao\\OutputDir '
+    'pra abrir ja preenchida na proxima execucao. Cada execucao '
+    'sobrescreve os arquivos anteriores nessa pasta.'
+)
+ja_tem = any(p.text.strip().startswith('Pasta de saida - pasta onde')
+             for p in doc.paragraphs)
+if not ja_tem:
+    # acha o paragrafo do "Ano" pra inserir o novo logo depois
+    p_ano = None
+    for p in doc.paragraphs:
+        if p.text.startswith('Ano - ano que aparece no titulo'):
+            p_ano = p
+            break
+    if p_ano is not None:
+        # acha um Compact pra usar como template de estilo
+        compact_tpl = None
+        for p in doc.paragraphs:
+            if p.style and p.style.name == 'Compact' and p.text.strip():
+                compact_tpl = p
+                break
+        if compact_tpl is not None:
+            new_p = clone_with_text(compact_tpl, desc_pasta)
+            p_ano._element.addnext(new_p)
+            print('OK: paragrafo "Pasta de saida" inserido apos "Ano".')
+        else:
+            print('AVISO: nenhum Compact disponivel pra clonar (pasta de saida)', file=sys.stderr)
+    else:
+        print('AVISO: paragrafo "Ano - ..." nao encontrado, pulando descricao da pasta de saida', file=sys.stderr)
+else:
+    print('Paragrafo "Pasta de saida" ja presente; nada a fazer em (8).')
 
 doc.save(str(DOCX))
 print(f'OK: {DOCX} atualizado.')
