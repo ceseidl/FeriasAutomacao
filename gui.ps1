@@ -31,6 +31,150 @@ if (-not (Test-Path $executar)) {
     exit 1
 }
 
+# ================== Splash Screen ==================
+function Show-SplashScreen {
+    param(
+        [string]$AppName  = 'Planejamento de Ferias',
+        [string]$Author   = 'Carlos Seidl',
+        [string]$IconPath,
+        [int]$DurationMs  = 1800
+    )
+
+    $splash = New-Object System.Windows.Forms.Form
+    $splash.Text             = ''
+    $splash.Size             = New-Object System.Drawing.Size(440, 270)
+    $splash.StartPosition    = 'CenterScreen'
+    $splash.FormBorderStyle  = 'None'
+    $splash.ShowInTaskbar    = $false
+    $splash.TopMost          = $true
+    $splash.BackColor        = [System.Drawing.Color]::FromArgb(30, 64, 124)
+
+    # Pre-carrega o icone como bitmap em alta resolucao.
+    # O ICO tem entradas PNG-encoded para 64+ que System.Drawing.Icon.ToBitmap()
+    # nao consegue ler no .NET Framework. Solucao: parse manual do arquivo ICO
+    # para extrair a maior entrada (PNG ou BMP) e carregar via Image.FromStream.
+    # Guardamos no Tag do form para acesso confiavel dentro do Paint handler.
+    $iconBmp = $null
+    if ($IconPath -and (Test-Path $IconPath)) {
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($IconPath)
+            if ($bytes.Length -ge 6) {
+                $count = [BitConverter]::ToUInt16($bytes, 4)
+                $bestSize = 0; $bestOffset = 0; $bestLength = 0
+                for ($i = 0; $i -lt $count; $i++) {
+                    $entryOff = 6 + ($i * 16)
+                    $w = [int]$bytes[$entryOff]; if ($w -eq 0) { $w = 256 }
+                    $dataSize = [BitConverter]::ToUInt32($bytes, $entryOff + 8)
+                    $dataOff  = [BitConverter]::ToUInt32($bytes, $entryOff + 12)
+                    if ($w -gt $bestSize) {
+                        $bestSize = $w; $bestOffset = $dataOff; $bestLength = $dataSize
+                    }
+                }
+                # PNG signature: 89 50 4E 47
+                if ($bestLength -gt 0 -and $bytes[$bestOffset] -eq 0x89 -and $bytes[$bestOffset + 1] -eq 0x50) {
+                    $ms = New-Object System.IO.MemoryStream($bytes, $bestOffset, $bestLength)
+                    $iconBmp = [System.Drawing.Image]::FromStream($ms)
+                } else {
+                    # Fallback: BMP/DIB embutido - usa Icon constructor com tamanho menor
+                    $rawIcon = New-Object System.Drawing.Icon($IconPath, 48, 48)
+                    $iconBmp = $rawIcon.ToBitmap()
+                    $rawIcon.Dispose()
+                }
+            }
+        } catch { $iconBmp = $null }
+    }
+    $splash.Tag = $iconBmp
+
+    # Desenha tudo no Paint (gradiente + borda + icone) para evitar
+    # problemas de PictureBox transparente sobre gradiente
+    $splash.Add_Paint({
+        param($sender, $e)
+        $g = $e.Graphics
+        $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+
+        $w = $sender.ClientSize.Width
+        $h = $sender.ClientSize.Height
+
+        # Gradiente azul de cima para baixo
+        $rect = New-Object System.Drawing.Rectangle(0, 0, $w, $h)
+        $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+            $rect,
+            [System.Drawing.Color]::FromArgb(50, 110, 195),
+            [System.Drawing.Color]::FromArgb(20, 50, 110),
+            [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
+        $g.FillRectangle($brush, $rect)
+        $brush.Dispose()
+
+        # Borda sutil
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(140, 255, 255, 255), 1)
+        $g.DrawRectangle($pen, 0, 0, $w - 1, $h - 1)
+        $pen.Dispose()
+
+        # Icone centralizado (recuperado via Tag do form)
+        $bmp = $sender.Tag
+        if ($bmp) {
+            $iconSize = 96
+            $iconX = [int](($w - $iconSize) / 2)
+            $g.DrawImage($bmp, $iconX, 22, $iconSize, $iconSize)
+        }
+    })
+
+    # Nome do app
+    $lblName = New-Object System.Windows.Forms.Label
+    $lblName.Text       = $AppName
+    $lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 18, [System.Drawing.FontStyle]::Bold)
+    $lblName.ForeColor  = [System.Drawing.Color]::White
+    $lblName.BackColor  = [System.Drawing.Color]::Transparent
+    $lblName.AutoSize   = $false
+    $lblName.TextAlign  = 'MiddleCenter'
+    $lblName.Location   = New-Object System.Drawing.Point(0, 130)
+    $lblName.Size       = New-Object System.Drawing.Size(440, 38)
+    $splash.Controls.Add($lblName)
+
+    # Feito por
+    $lblAuthor = New-Object System.Windows.Forms.Label
+    $lblAuthor.Text       = "Feito por $Author"
+    $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Italic)
+    $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 215, 240)
+    $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent
+    $lblAuthor.AutoSize   = $false
+    $lblAuthor.TextAlign  = 'MiddleCenter'
+    $lblAuthor.Location   = New-Object System.Drawing.Point(0, 175)
+    $lblAuthor.Size       = New-Object System.Drawing.Size(440, 22)
+    $splash.Controls.Add($lblAuthor)
+
+    # Versao discreta no rodape
+    $lblVersion = New-Object System.Windows.Forms.Label
+    $lblVersion.Text       = 'v1.0.0'
+    $lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 8)
+    $lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(160, 180, 215)
+    $lblVersion.BackColor  = [System.Drawing.Color]::Transparent
+    $lblVersion.AutoSize   = $false
+    $lblVersion.TextAlign  = 'MiddleCenter'
+    $lblVersion.Location   = New-Object System.Drawing.Point(0, 230)
+    $lblVersion.Size       = New-Object System.Drawing.Size(440, 18)
+    $splash.Controls.Add($lblVersion)
+
+    $splash.Show()
+    $splash.Refresh()
+    [System.Windows.Forms.Application]::DoEvents()
+
+    # Mantem visivel pelo tempo configurado, com pump de eventos
+    $endAt = (Get-Date).AddMilliseconds($DurationMs)
+    while ((Get-Date) -lt $endAt) {
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 30
+    }
+
+    $splash.Close()
+    $splash.Dispose()
+    if ($iconBmp) { $iconBmp.Dispose() }
+}
+
+$splashIconPath = Join-Path $scriptDir 'assets\icon.ico'
+Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 1800
+
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Planejamento de Ferias - Gerador'
