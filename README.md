@@ -6,6 +6,10 @@ Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
 
 ![Screenshot da janela](docs/screenshot.png)
 
+> **Usuario final:** consulte o **[Manual do Usuario](docs/MANUAL.md)** com o
+> passo-a-passo completo (download -> extracao -> preencher planilha -> gerar
+> relatorio -> troubleshooting).
+
 ---
 
 ## O que faz
