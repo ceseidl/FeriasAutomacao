@@ -19,6 +19,62 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# ============================================================
+# Single-instance guard
+# ------------------------------------------------------------
+# Usa um Named Mutex pra impedir que mais de uma janela do app
+# fique aberta ao mesmo tempo na mesma maquina. O Mutex e
+# liberado automaticamente pelo SO quando o processo termina,
+# entao nao precisamos de cleanup explicito (e nao chamamos
+# ReleaseMutex pra evitar AbandonedMutexException entre threads
+# da UI).
+#
+# Tenta primeiro com prefixo 'Global\' (machine-wide). Se a
+# politica de seguranca da maquina nao permitir (raro, mas pode
+# acontecer em ambientes corporativos com restricoes), cai pra
+# 'Local\' (per-session) - ainda cobre o caso normal de um
+# usuario unico no desktop.
+# ============================================================
+$singleInstanceMutex = $null
+$createdNew = $false
+try {
+    $singleInstanceMutex = New-Object System.Threading.Mutex($true, 'Global\FeriasAutomacao_SingleInstance', [ref]$createdNew)
+} catch [System.UnauthorizedAccessException] {
+    $singleInstanceMutex = New-Object System.Threading.Mutex($true, 'Local\FeriasAutomacao_SingleInstance', [ref]$createdNew)
+}
+
+if (-not $createdNew) {
+    # Ja existe uma instancia. Tenta trazer a janela existente pra frente
+    # antes de mostrar a mensagem (UX: usuario percebe que o app ja esta
+    # aberto e nao precisa procurar onde ficou).
+    try {
+        $existing = Get-Process -Id $PID -ErrorAction SilentlyContinue
+        $proc = Get-Process |
+                Where-Object { $_.MainWindowTitle -like '*Planejamento de Ferias*' -and $_.Id -ne $PID } |
+                Select-Object -First 1
+        if ($proc -and $proc.MainWindowHandle -ne [IntPtr]::Zero) {
+            Add-Type -Namespace Win32 -Name Native -MemberDefinition @'
+                [System.Runtime.InteropServices.DllImport("user32.dll")]
+                public static extern bool SetForegroundWindow(System.IntPtr hWnd);
+                [System.Runtime.InteropServices.DllImport("user32.dll")]
+                public static extern bool ShowWindowAsync(System.IntPtr hWnd, int nCmdShow);
+'@ -ErrorAction SilentlyContinue
+            # SW_RESTORE = 9 (restaura se estava minimizada)
+            [Win32.Native]::ShowWindowAsync($proc.MainWindowHandle, 9) | Out-Null
+            [Win32.Native]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
+        }
+    } catch {
+        # best-effort - se falhar, segue mostrando a mensagem
+    }
+
+    [System.Windows.Forms.MessageBox]::Show(
+        "O Planejamento de Ferias ja esta aberto neste computador.`nFeche a janela existente antes de abrir uma nova.",
+        'App ja esta em execucao', 'OK', 'Information') | Out-Null
+
+    if ($singleInstanceMutex) { $singleInstanceMutex.Dispose() }
+    exit 0
+}
+
 $scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $executar    = Join-Path $scriptDir 'executar.ps1'
 $xlsxDefault = Join-Path $scriptDir 'Ferias-template.xlsx'

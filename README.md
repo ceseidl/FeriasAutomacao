@@ -104,9 +104,14 @@ atalho `Gerar Relatorio.lnk`. Pra trocar o design:
 4. Janela abre com:
    - **Ano** (NumericUpDown, default = ano atual)
    - **Planilha** (caminho + botao Procurar)
+   - **Pasta de saida** (caminho + botao Procurar; persistida em registry)
    - **Abrir HTML apos gerar** (checkbox marcado)
    - Botao **Gerar Relatorio** (atalho `Enter`)
    - Botao **Fechar** (atalho `Esc`)
+
+> **Instancia unica:** o app so permite uma janela aberta por vez no mesmo PC.
+> Se voce der duplo-clique no atalho com a janela ja aberta, a janela existente
+> volta pra frente e uma mensagem avisa que ja esta em execucao.
 5. Apertar `Gerar Relatorio` -> aguardar progress bar -> HTML abre automaticamente
 
 ---
