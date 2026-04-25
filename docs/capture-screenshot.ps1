@@ -67,14 +67,19 @@ $lblAno.Location = New-Object System.Drawing.Point(15, 55)
 $lblAno.Size = New-Object System.Drawing.Size(75, 22)
 $form.Controls.Add($lblAno)
 
-$nudAno = New-Object System.Windows.Forms.NumericUpDown
-$nudAno.Location = New-Object System.Drawing.Point(90, 53)
-$nudAno.Size = New-Object System.Drawing.Size(90, 22)
-$nudAno.Minimum = 2020
-$nudAno.Maximum = 2100
-$nudAno.Value = (Get-Date).Year
-$nudAno.TextAlign = 'Center'
-$form.Controls.Add($nudAno)
+$btnAno = New-Object System.Windows.Forms.Button
+$btnAno.Location = New-Object System.Drawing.Point(90, 53)
+$btnAno.Size = New-Object System.Drawing.Size(100, 24)
+$btnAno.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnAno.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+$btnAno.FlatAppearance.BorderSize = 1
+$btnAno.BackColor = [System.Drawing.Color]::White
+$btnAno.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
+$btnAno.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+$btnAno.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$btnAno.Tag = (Get-Date).Year
+$btnAno.Text = "$((Get-Date).Year)   $([char]0x25BE)"
+$form.Controls.Add($btnAno)
 
 $lblXlsx = New-Object System.Windows.Forms.Label
 $lblXlsx.Text = 'Planilha:'

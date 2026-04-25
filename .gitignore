@@ -19,3 +19,6 @@ desktop.ini
 
 # Preview do icone (regeneravel pelo assets/generate-icon.ps1)
 assets/icon-*.png
+
+# Planilha ghost regeneravel pelo Generate-GhostXlsx.ps1
+tests/ghost-data/ferias-ghost-mixed.xlsx

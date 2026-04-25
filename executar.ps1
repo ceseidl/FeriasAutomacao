@@ -257,6 +257,20 @@ if (-not $rows -or $rows.Count -eq 0) {
 
 Write-Host ("Linhas carregadas: {0}" -f $rows.Count)
 
+# Filtro por ano selecionado: independente do que a planilha contem, mantem
+# apenas as ferias que COMECAM no ano $Ano. Garante que selecionar 2027 nao
+# misture com dados de 2026 caso o arquivo tenha varios anos.
+$rowsAntesFiltro = $rows.Count
+$rows = @($rows | Where-Object {
+    $iso = ConvertTo-IsoDate $_.Inicio
+    $iso -and $iso.StartsWith("$Ano-")
+})
+Write-Host ("Filtro por ano {0}: {1} -> {2} linhas" -f $Ano, $rowsAntesFiltro, $rows.Count)
+
+if ($rows.Count -eq 0) {
+    throw "Nenhuma linha de ferias para o ano $Ano. A planilha tem $rowsAntesFiltro linhas, mas nenhuma comeca em $Ano."
+}
+
 # 2. Dashboard por mes
 $dashboardLines = @()
 $grouped = $rows | Group-Object Mes | Sort-Object { Get-MonthIndex $_.Name }
