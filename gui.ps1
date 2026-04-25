@@ -173,7 +173,7 @@ function Show-SplashScreen {
 }
 
 $splashIconPath = Join-Path $scriptDir 'assets\icon.ico'
-Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 1800
+Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 15000
 
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
