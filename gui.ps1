@@ -47,6 +47,8 @@ function Show-SplashScreen {
     $splash.FormBorderStyle  = 'None'
     $splash.ShowInTaskbar    = $false
     $splash.TopMost          = $true
+    $splash.UseWaitCursor    = $true
+    $splash.Cursor           = [System.Windows.Forms.Cursors]::WaitCursor
     $splash.BackColor        = [System.Drawing.Color]::FromArgb(30, 64, 124)
 
     # Pre-carrega o icone como bitmap em alta resolucao.
@@ -158,15 +160,20 @@ function Show-SplashScreen {
 
     $splash.Show()
     $splash.Refresh()
+    [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::WaitCursor
     [System.Windows.Forms.Application]::DoEvents()
 
-    # Mantem visivel pelo tempo configurado, com pump de eventos
+    # Mantem visivel pelo tempo configurado, com pump de eventos.
+    # Forca o cursor de ampulheta a cada iteracao para que fique
+    # sticky mesmo quando o mouse esta fora da splash.
     $endAt = (Get-Date).AddMilliseconds($DurationMs)
     while ((Get-Date) -lt $endAt) {
+        [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::WaitCursor
         [System.Windows.Forms.Application]::DoEvents()
         Start-Sleep -Milliseconds 30
     }
 
+    [System.Windows.Forms.Cursor]::Current = [System.Windows.Forms.Cursors]::Default
     $splash.Close()
     $splash.Dispose()
     if ($iconBmp) { $iconBmp.Dispose() }
