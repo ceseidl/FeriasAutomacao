@@ -17,9 +17,9 @@
 
 .PARAMETER XlsxPath
     Caminho para a planilha. Default: .\Ferias-template.xlsx
-
-.PARAMETER CsvPath
-    Alternativa ao xlsx. Se informado, sobrescreve XlsxPath. Separador esperado: ';'.
+    REGRA: o app SO funciona com a planilha-template oficial
+    (Ferias-template.xlsx, com as 5 abas Ferias/Squads/Integrantes/Status/
+    Instrucoes). Qualquer outro arquivo e rejeitado com erro claro.
 
 .PARAMETER OutputDir
     Pasta de saida para os arquivos gerados. Default: .\results (criada automaticamente).
@@ -46,7 +46,6 @@
 [CmdletBinding()]
 param(
     [string]$XlsxPath = (Join-Path $PSScriptRoot 'Ferias-template.xlsx'),
-    [string]$CsvPath,
     [string]$OutputDir = (Join-Path $PSScriptRoot 'results'),
     [string]$TemplatePath = (Join-Path $PSScriptRoot 'template.md'),
     [string]$CssPath = (Join-Path $PSScriptRoot 'assets\style.css'),
@@ -60,6 +59,56 @@ param(
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# ============================================================
+# Template oficial - regra de validacao
+# ------------------------------------------------------------
+# O app SO funciona com a planilha-template oficial. Validamos:
+#   1. Nome do arquivo (case-insensitive) = Ferias-template.xlsx
+#   2. Workbook contem TODAS as 5 abas esperadas
+# Qualquer arquivo que falhe em (1) ou (2) e rejeitado com
+# mensagem clara. Isso garante que o pipeline (dropdowns,
+# filtros por ano, gantt) sempre encontre os dados onde espera.
+# ============================================================
+$TEMPLATE_FILENAME       = 'Ferias-template.xlsx'
+$TEMPLATE_REQUIRED_SHEETS = @('Ferias', 'Squads', 'Integrantes', 'Status', 'Instrucoes')
+
+function Test-FeriasTemplate {
+    param(
+        [Parameter(Mandatory)] [string]$Path
+    )
+
+    if (-not (Test-Path $Path)) {
+        throw "Planilha nao encontrada: $Path"
+    }
+
+    $actualName = Split-Path -Leaf $Path
+    if ($actualName -ne $TEMPLATE_FILENAME) {
+        throw @"
+Planilha invalida: '$actualName'.
+O app so funciona com a planilha-template oficial '$TEMPLATE_FILENAME'.
+Use o template original que vem junto com o app (ou renomeie sua copia
+pra esse nome, mantendo a estrutura de 5 abas).
+"@
+    }
+
+    if (-not (Get-Module -ListAvailable -Name ImportExcel)) {
+        Write-Host "Modulo ImportExcel nao encontrado. Instalando no escopo do usuario..." -ForegroundColor Yellow
+        Install-Module ImportExcel -Scope CurrentUser -Force -ErrorAction Stop
+    }
+    Import-Module ImportExcel -ErrorAction Stop | Out-Null
+
+    $actualSheets = @(Get-ExcelSheetInfo -Path $Path | ForEach-Object { $_.Name })
+    $missing = @($TEMPLATE_REQUIRED_SHEETS | Where-Object { $_ -notin $actualSheets })
+    if ($missing.Count -gt 0) {
+        throw @"
+Planilha invalida: '$actualName' nao tem a estrutura esperada.
+Abas faltando: $($missing -join ', ').
+O app so funciona com a planilha-template oficial, que precisa conter
+todas as 5 abas: $($TEMPLATE_REQUIRED_SHEETS -join ', ').
+"@
+    }
+}
 
 function Update-PathFromEnvironment {
     $machinePath = [System.Environment]::GetEnvironmentVariable('Path','Machine')
@@ -199,19 +248,12 @@ function Get-MonthIndex([string]$m) {
 }
 
 function Read-XlsxRows([string]$Path) {
-    if (-not (Test-Path $Path)) { throw "Planilha nao encontrada: $Path" }
-    if (-not (Get-Module -ListAvailable -Name ImportExcel)) {
-        Write-Host "Modulo ImportExcel nao encontrado. Instalando no escopo do usuario..." -ForegroundColor Yellow
-        Install-Module ImportExcel -Scope CurrentUser -Force -ErrorAction Stop
-    }
+    # A validacao de Path + estrutura ja foi feita por Test-FeriasTemplate
+    # antes desta funcao ser chamada. Aqui so faz o load dos dados da aba
+    # Ferias (que sabemos que existe).
     Import-Module ImportExcel -ErrorAction Stop | Out-Null
     $data = Import-Excel -Path $Path -WorksheetName 'Ferias' -ErrorAction Stop
     return , $data
-}
-
-function Read-CsvRows([string]$Path) {
-    if (-not (Test-Path $Path)) { throw "CSV nao encontrado: $Path" }
-    return , (Import-Csv -Path $Path -Delimiter ';' -Encoding UTF8)
 }
 
 function Format-DateBr([object]$v) {
@@ -236,13 +278,14 @@ function ConvertTo-IsoDate([string]$br) {
 }
 
 # 1. Le os dados
-if ($CsvPath) {
-    Write-Host "Lendo CSV: $CsvPath"
-    $rowsRaw = Read-CsvRows -Path $CsvPath
-} else {
-    Write-Host "Lendo planilha: $XlsxPath"
-    $rowsRaw = Read-XlsxRows -Path $XlsxPath
-}
+# Antes de qualquer leitura, valida que e a planilha-template oficial:
+#   - nome do arquivo = Ferias-template.xlsx
+#   - workbook tem as 5 abas esperadas
+# Se falhar, joga uma excecao com mensagem auto-explicativa que e
+# capturada pela GUI e exibida em MessageBox.
+Test-FeriasTemplate -Path $XlsxPath
+Write-Host "Lendo planilha: $XlsxPath"
+$rowsRaw = Read-XlsxRows -Path $XlsxPath
 
 # Normaliza (nomes de coluna, datas, tipos)
 $rows = foreach ($r in $rowsRaw) {
@@ -348,20 +391,11 @@ $outHtml = Join-Path $OutputDir 'Ferias.html'
 $outXlsx = Join-Path $OutputDir 'Ferias.xlsx'
 Write-Host "Pasta de saida: $OutputDir"
 
-# Copia da planilha de entrada (snapshot do que gerou o relatorio).
-# Se rodou com -CsvPath, a fonte eh CSV; senao eh XlsxPath. Em qualquer
-# caso, copia preservando a extensao original pra a saida ser auto-
-# explicativa (Ferias.xlsx pra Excel, Ferias.csv pra CSV).
-$srcData = if ($CsvPath) { $CsvPath } else { $XlsxPath }
-if ($srcData -and (Test-Path $srcData)) {
-    $srcExt = [System.IO.Path]::GetExtension($srcData)
-    if ([string]::IsNullOrEmpty($srcExt)) { $srcExt = '.xlsx' }
-    $outXlsx = Join-Path $OutputDir ('Ferias' + $srcExt)
-    Copy-Item -Path $srcData -Destination $outXlsx -Force
-    Write-Host "Planilha-fonte copiada: $outXlsx"
-} else {
-    Write-Host "AVISO: planilha-fonte nao encontrada em '$srcData' - copia pulada." -ForegroundColor Yellow
-}
+# Copia da planilha-fonte como snapshot. A regra do template garante
+# que XlsxPath aponta pra Ferias-template.xlsx valido, entao nao ha
+# fallback CSV nem extensao variavel - sempre Ferias.xlsx.
+Copy-Item -Path $XlsxPath -Destination $outXlsx -Force
+Write-Host "Planilha-fonte copiada: $outXlsx"
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($outMd, $md, $utf8NoBom)

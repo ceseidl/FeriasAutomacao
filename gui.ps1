@@ -521,8 +521,13 @@ $btnBrowse.Text = 'Procurar...'
 $btnBrowse.Location = New-Object System.Drawing.Point(470, 84)
 $btnBrowse.Size = New-Object System.Drawing.Size(85, 26)
 $btnBrowse.Add_Click({
+    # O app so funciona com a planilha-template oficial. Trava o filtro
+    # do dialogo pra so listar 'Ferias-template.xlsx' - se o usuario
+    # escolher outro nome, executar.ps1 rejeita com erro claro de qualquer
+    # forma (vide Test-FeriasTemplate la).
     $dlg = New-Object System.Windows.Forms.OpenFileDialog
-    $dlg.Filter = 'Excel (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv|Todos (*.*)|*.*'
+    $dlg.Title  = 'Selecione a planilha-template (Ferias-template.xlsx)'
+    $dlg.Filter = 'Planilha-template (Ferias-template.xlsx)|Ferias-template.xlsx'
     $dlg.InitialDirectory = $scriptDir
     if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $txtXlsx.Text = $dlg.FileName

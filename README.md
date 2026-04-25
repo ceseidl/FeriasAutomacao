@@ -122,7 +122,6 @@ atalho `Gerar Relatorio.lnk`. Pra trocar o design:
 .\executar.ps1                                  # ano atual, autor = $env:USERNAME
 .\executar.ps1 -Ano 2027 -Autor "Carlos Seidl"
 .\executar.ps1 -OpenAfter                       # abre o HTML depois de gerar
-.\executar.ps1 -CsvPath .\ferias.csv            # usa CSV (delimitador ';')
 .\executar.ps1 -OutputDir C:\temp               # muda pasta de saida
 ```
 
@@ -130,12 +129,21 @@ Parametros completos:
 
 | Parametro | Default | Descricao |
 |---|---|---|
-| `-XlsxPath` | `.\Ferias-template.xlsx` | Planilha de entrada |
-| `-CsvPath` | (vazio) | Alternativa ao xlsx, separador `;` |
+| `-XlsxPath` | `.\Ferias-template.xlsx` | Planilha de entrada (precisa ser o template oficial) |
 | `-OutputDir` | `.\results` | Pasta de saida |
 | `-Autor` | `$env:USERNAME` | Nome no rodape e no `<meta name="author">` |
 | `-Ano` | `(Get-Date).Year` | Ano usado no titulo (h1, `<title>`, Gantt) |
 | `-OpenAfter` | `$false` | Abre o HTML automaticamente apos gerar |
+| `-Pdf` | `$false` | Gera tambem `Ferias.pdf` (compativel com SharePoint) |
+
+> **Regra do template:** o app SO funciona com a planilha-template oficial.
+> A validacao roda antes de qualquer leitura e checa **duas** coisas:
+> 1. **Nome do arquivo:** precisa ser `Ferias-template.xlsx` (case-insensitive)
+> 2. **Estrutura:** o workbook precisa ter as 5 abas
+>    `Ferias`, `Squads`, `Integrantes`, `Status`, `Instrucoes`
+>
+> Qualquer arquivo que falhe em (1) ou (2) e rejeitado com mensagem clara
+> tanto no CLI quanto na GUI (MessageBox).
 
 ---
 
@@ -182,7 +190,8 @@ Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa 
 | Problema | Solucao |
 |---|---|
 | `Planilha nao encontrada` | Conferir caminho de `Ferias-template.xlsx` |
-| Acentos quebrados | Garantir que a planilha esta salva em UTF-8 |
+| `Planilha invalida: '...'` | Usar a planilha-template oficial (nome `Ferias-template.xlsx` + as 5 abas Ferias/Squads/Integrantes/Status/Instrucoes) |
+| `Abas faltando: ...` | Sua copia da planilha foi mexida e perdeu uma das abas. Pegar o template original do release e copiar seus dados pra ele |
 | HTML sem Gantt | Verificar internet ao abrir o HTML (CDN do Mermaid) |
 | `ImportExcel` falha ao instalar | Rodar PowerShell como admin: `Install-Module ImportExcel -Scope CurrentUser -Force` |
 | Erro de execucao de script (politica) | `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` |
