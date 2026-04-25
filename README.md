@@ -4,6 +4,8 @@ Geracao automatica de Markdown + HTML do Planejamento de Ferias a partir de uma 
 
 Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
 
+![Screenshot da janela](docs/screenshot.png)
+
 ---
 
 ## O que faz

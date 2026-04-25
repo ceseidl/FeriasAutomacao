@@ -1,0 +1,61 @@
+name: PowerShell Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Parse + PSScriptAnalyzer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Parse all .ps1 files (syntax check)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Recurse -Filter *.ps1
+          $errors = @()
+          foreach ($f in $files) {
+              $tokens = $null
+              $parseErrors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  $f.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+              if ($parseErrors.Count -gt 0) {
+                  Write-Host "::error file=$($f.FullName)::Parse errors found"
+                  $parseErrors | ForEach-Object {
+                      Write-Host "  $($_.Extent.StartLineNumber):$($_.Extent.StartColumnNumber) $($_.Message)"
+                  }
+                  $errors += $parseErrors
+              } else {
+                  Write-Host "OK: $($f.FullName)"
+              }
+          }
+          if ($errors.Count -gt 0) {
+              Write-Host "::error::$($errors.Count) parse error(s) found"
+              exit 1
+          }
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity @('Error','Warning')
+          if ($results) {
+              $results | Format-Table -AutoSize
+              $errorCount = ($results | Where-Object Severity -eq 'Error').Count
+              $warnCount  = ($results | Where-Object Severity -eq 'Warning').Count
+              Write-Host "::warning::PSScriptAnalyzer found $errorCount error(s) and $warnCount warning(s)"
+              if ($errorCount -gt 0) { exit 1 }
+          } else {
+              Write-Host "PSScriptAnalyzer: no issues found"
+          }
