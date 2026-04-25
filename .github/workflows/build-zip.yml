@@ -1,0 +1,64 @@
+name: Build ZIP
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # permite acionar manualmente pela aba Actions
+
+permissions:
+  contents: write   # necessario para criar/atualizar a release "latest"
+
+jobs:
+  build:
+    name: Empacotar e publicar ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Gerar ZIP do projeto
+        id: zip
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y%m%d-%H%M%S)
+          ZIP_NAME="FeriasAutomacao-${DATE}-${SHORT_SHA}.zip"
+
+          # Cria o zip excluindo lixo de dev e arquivos regenerados
+          zip -r "${ZIP_NAME}" . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "results/*" \
+            -x "*.log" \
+            -x "assets/icon-*.png"
+
+          # Copia com nome estavel pra release "latest"
+          cp "${ZIP_NAME}" "FeriasAutomacao-latest.zip"
+
+          echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          ls -lh FeriasAutomacao-*.zip
+
+      - name: Upload do artifact (90 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeriasAutomacao
+          path: ${{ steps.zip.outputs.zip_name }}
+          retention-days: 90
+
+      - name: Atualizar release "latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (main)
+          body: |
+            Build automatico da branch `main`.
+
+            - Commit: ${{ github.sha }}
+            - Mensagem: ${{ github.event.head_commit.message }}
+            - Disparado por: ${{ github.actor }}
+
+            Baixe o ZIP `FeriasAutomacao-latest.zip` para sempre ter a ultima versao.
+          prerelease: true
+          files: |
+            ${{ steps.zip.outputs.zip_name }}
+            FeriasAutomacao-latest.zip
