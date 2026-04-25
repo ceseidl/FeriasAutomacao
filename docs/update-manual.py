@@ -286,5 +286,64 @@ for p in doc.paragraphs:
             swaps += 1
 print(f'Renomeacao da planilha: {swaps} run(s) atualizados.')
 
+# ---------- 7) Saida em pasta com timestamp (results\Ferias-{ts}\) ----------
+# Antes os arquivos saiam soltos em results\. Agora cada execucao tem a
+# sua subpasta results\Ferias-{ts}\ com .md, .html e .xlsx (snapshot da
+# planilha) dentro. Atualiza:
+#   - paragrafo descritivo "Cada execucao cria arquivos com timestamp..."
+#   - bloco Source Code com a estrutura de pastas
+#   - referencia em "Subir o arquivo Ferias-{timestamp}.pdf"
+old_desc = 'Cada execucao cria arquivos com timestamp na pasta results\\:'
+new_desc = ('Cada execucao cria uma subpasta results\\Ferias-{timestamp}\\ '
+            'com o relatorio em multiplos formatos + a planilha-fonte:')
+for p in doc.paragraphs:
+    if p.text.strip() == old_desc:
+        for r in list(p.runs):
+            r.text = ''
+        if p.runs:
+            p.runs[0].text = new_desc
+        else:
+            p.add_run(new_desc)
+        break
+
+# Bloco Source Code (a estrutura literal). Reescrevemos pra refletir o
+# novo layout. Procura pelo paragrafo Source Code que comeca com 'results\'
+# e ainda mostra arquivos soltos sem subpasta.
+new_tree = (
+    'results\\\n'
+    '  Ferias-20260425-143012\\\n'
+    '    Ferias-20260425-143012.md     <- versao Markdown (texto puro)\n'
+    '    Ferias-20260425-143012.html   <- versao HTML formatada (interativa)\n'
+    '    Ferias-20260425-143012.xlsx   <- copia da planilha que gerou o relatorio\n'
+    '    Ferias-20260425-143012.pdf    <- (opcional, com a opcao "Gerar PDF tambem" marcada)\n'
+    '  Ferias-20260425-150133\\         <- proxima execucao, em nova subpasta\n'
+    '    ...'
+)
+for p in doc.paragraphs:
+    if p.style.name == 'Source Code' and p.text.lstrip().startswith('results\\') \
+            and 'Ferias-20260425-143012\\' not in p.text:
+        # zera todos os runs e poe o novo conteudo no primeiro
+        for r in list(p.runs):
+            r.text = ''
+        if p.runs:
+            p.runs[0].text = new_tree
+        else:
+            p.add_run(new_tree)
+        break
+
+# "Subir o arquivo Ferias-{timestamp}.pdf na biblioteca do SharePoint"
+old_share = 'Subir o arquivo Ferias-{timestamp}.pdf na biblioteca do SharePoint'
+new_share = ('Subir o arquivo Ferias-{timestamp}.pdf de dentro da subpasta '
+             'Ferias-{timestamp}\\ na biblioteca do SharePoint')
+for p in doc.paragraphs:
+    if p.text.strip() == old_share:
+        for r in list(p.runs):
+            r.text = ''
+        if p.runs:
+            p.runs[0].text = new_share
+        else:
+            p.add_run(new_share)
+        break
+
 doc.save(str(DOCX))
 print(f'OK: {DOCX} atualizado.')

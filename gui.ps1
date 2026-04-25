@@ -542,10 +542,13 @@ $btnGenerate.Add_Click({
     try {
         & $executar -XlsxPath $xlsx -Autor $autor -Ano $ano -Pdf:$chkPdf.Checked *>&1 | Out-Null
 
-        # Procura o ultimo HTML gerado; se PDF marcado, prefere abrir o PDF
-        $latestHtml = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.html' -ErrorAction SilentlyContinue |
+        # Procura o ultimo HTML gerado; se PDF marcado, prefere abrir o PDF.
+        # Cada execucao cria results\Ferias-{timestamp}\ com seus 3-4 arquivos
+        # dentro, entao buscamos recursivamente (e -Recurse tambem cobre
+        # arquivos antigos que ficaram soltos no formato anterior).
+        $latestHtml = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.html' -Recurse -File -ErrorAction SilentlyContinue |
                       Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $latestPdf  = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.pdf'  -ErrorAction SilentlyContinue |
+        $latestPdf  = Get-ChildItem -Path $resultsDir -Filter 'Ferias-*.pdf'  -Recurse -File -ErrorAction SilentlyContinue |
                       Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
         if (-not $latestHtml) {

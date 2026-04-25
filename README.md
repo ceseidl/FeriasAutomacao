@@ -21,11 +21,15 @@ Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
    - **Gantt** (Mermaid, gerado dinamicamente)
    - **Rodape de autoria** (`Criado e compilado por <Autor> em dd/MM/yyyy as HH:mm`)
 3. Roda **Pandoc** para gerar o HTML estilizado (CSS embutido + script do Mermaid no `<head>`)
-4. Cada execucao gera um arquivo novo com timestamp, preservando historico:
+4. Cada execucao gera uma pasta nova com timestamp, contendo o relatorio
+   em multiplos formatos + a planilha-fonte (snapshot), preservando historico:
 
 ```
-results/Ferias-yyyyMMdd-HHmmss.md
-results/Ferias-yyyyMMdd-HHmmss.html
+results/Ferias-yyyyMMdd-HHmmss/
+  Ferias-yyyyMMdd-HHmmss.md     <- relatorio em Markdown
+  Ferias-yyyyMMdd-HHmmss.html   <- relatorio em HTML (CSS+Mermaid embutido)
+  Ferias-yyyyMMdd-HHmmss.xlsx   <- copia da planilha que gerou o relatorio
+  Ferias-yyyyMMdd-HHmmss.pdf    <- (opcional, com -Pdf)
 ```
 
 ---
@@ -147,7 +151,7 @@ Ferias-template.xlsx
    template.md ---- substitui <!-- DASHBOARD -->, <!-- CRONOGRAMA -->,
        |             <!-- GANTT -->, <!-- AUTOR --> e <!-- ANO -->
        v
-   results/Ferias-{timestamp}.md
+   results/Ferias-{timestamp}/Ferias-{timestamp}.md
        |
        v
      Pandoc ---- --standalone --embed-resources
@@ -155,7 +159,8 @@ Ferias-template.xlsx
        |          --include-in-header assets/header.html
        |          --lua-filter assets/mermaid.lua
        v
-   results/Ferias-{timestamp}.html  (HTML standalone com CSS embutido)
+   results/Ferias-{timestamp}/Ferias-{timestamp}.html  (HTML standalone)
+   results/Ferias-{timestamp}/Ferias-{timestamp}.xlsx  (copia da planilha-fonte)
 ```
 
 Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa de internet ao **abrir** o HTML.
