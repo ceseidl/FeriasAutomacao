@@ -39,8 +39,22 @@ $singleInstanceMutex = $null
 $createdNew = $false
 try {
     $singleInstanceMutex = New-Object System.Threading.Mutex($true, 'Global\FeriasAutomacao_SingleInstance', [ref]$createdNew)
-} catch [System.UnauthorizedAccessException] {
-    $singleInstanceMutex = New-Object System.Threading.Mutex($true, 'Local\FeriasAutomacao_SingleInstance', [ref]$createdNew)
+} catch {
+    # Fallback 1: politica corporativa pode bloquear 'Global\'.
+    # Tenta 'Local\' (per-session) que ainda cobre o caso normal.
+    try {
+        $singleInstanceMutex = New-Object System.Threading.Mutex($true, 'Local\FeriasAutomacao_SingleInstance', [ref]$createdNew)
+    } catch {
+        # Fallback 2: nada funcionou (extremamente raro). Em vez de quebrar
+        # o app, faz um degrade graceful: deixa abrir mesmo sem o lock e
+        # avisa o usuario por MessageBox que o controle de instancia unica
+        # esta desabilitado naquela sessao.
+        [System.Windows.Forms.MessageBox]::Show(
+            "Nao foi possivel ativar o controle de instancia unica.`n`nMotivo: $($_.Exception.Message)`n`nO app vai abrir mesmo assim, mas evite executar duas instancias ao mesmo tempo (pode causar conflito ao gerar os arquivos).",
+            'Aviso: instancia unica desabilitada', 'OK', 'Warning') | Out-Null
+        $createdNew = $true
+        $singleInstanceMutex = $null
+    }
 }
 
 if (-not $createdNew) {
@@ -643,19 +657,60 @@ $btnGenerate.Add_Click({
     $xlsx      = $txtXlsx.Text.Trim()
     $outputDir = $txtOutDir.Text.Trim()
 
-    if (-not (Test-Path $xlsx)) {
-        [System.Windows.Forms.MessageBox]::Show("Planilha nao encontrada:`n$xlsx",
-            'Erro', 'OK', 'Error') | Out-Null
+    # ---- Pre-flight: planilha ----
+    if ([string]::IsNullOrWhiteSpace($xlsx)) {
+        [System.Windows.Forms.MessageBox]::Show('Informe o caminho da planilha.',
+            'Planilha nao informada', 'OK', 'Error') | Out-Null
         return
     }
 
+    if (-not (Test-Path $xlsx)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Planilha nao encontrada:`n$xlsx`n`nVerifique o caminho ou clique em Procurar... pra selecionar o arquivo.",
+            'Planilha nao encontrada', 'OK', 'Error') | Out-Null
+        return
+    }
+
+    # Pre-flight de nome: o app SO funciona com Ferias-template.xlsx.
+    # Esta checagem da feedback instantaneo (a validacao completa, incluindo
+    # estrutura das 5 abas, e feita no executar.ps1 e tambem dispara
+    # MessageBox via catch -> sem perda de robustez no CLI).
+    $xlsxName = Split-Path -Leaf $xlsx
+    if ($xlsxName -ne 'Ferias-template.xlsx') {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Planilha invalida: '$xlsxName'.`n`nO app so funciona com a planilha-template oficial 'Ferias-template.xlsx'.`n`nUse o template original que vem junto com o app (ou renomeie sua copia pra esse nome, mantendo a estrutura de 5 abas).",
+            'Planilha invalida', 'OK', 'Error') | Out-Null
+        return
+    }
+
+    # ---- Pre-flight: pasta de saida ----
     if ([string]::IsNullOrWhiteSpace($outputDir)) {
         [System.Windows.Forms.MessageBox]::Show('Informe a pasta de saida.',
-            'Erro', 'OK', 'Error') | Out-Null
+            'Pasta de saida nao informada', 'OK', 'Error') | Out-Null
         return
     }
 
-    # Persiste a escolha do usuario para futuras execucoes (best-effort).
+    # Cria a pasta se nao existir e testa permissao de escrita criando+
+    # apagando um arquivo temporario. Falha aqui (drive inexistente,
+    # caminho invalido, permissao negada) cai com mensagem clara em vez
+    # de explodir la dentro do executar.ps1 com erro generico do .NET.
+    try {
+        if (-not (Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Path $outputDir -Force -ErrorAction Stop | Out-Null
+        }
+        $writeTest = Join-Path $outputDir ('.write-test-' + [Guid]::NewGuid().ToString('N'))
+        Set-Content -Path $writeTest -Value 'ok' -ErrorAction Stop
+        Remove-Item -Path $writeTest -Force -ErrorAction SilentlyContinue
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Nao foi possivel usar a pasta de saida:`n$outputDir`n`nMotivo: $($_.Exception.Message)`n`nEscolha uma pasta com permissao de escrita (ex: sua pasta de Documentos).",
+            'Pasta de saida invalida', 'OK', 'Error') | Out-Null
+        return
+    }
+
+    # Persiste a escolha do usuario apenas APOS validar (assim a gente nao
+    # salva no registry uma pasta quebrada que vai falhar de novo na proxima
+    # vez). Best-effort - falha em escrever registry nao quebra o fluxo.
     Set-OutputDirPreference -Value $outputDir
 
     $btnGenerate.Enabled  = $false
