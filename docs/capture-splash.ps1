@@ -34,12 +34,12 @@ $iconPath  = Join-Path (Split-Path -Parent $scriptDir) 'assets\icon.ico'
 
 $splash = New-Object System.Windows.Forms.Form
 $splash.Text             = ''
-$splash.Size             = New-Object System.Drawing.Size(440, 270)
+$splash.Size             = New-Object System.Drawing.Size(528, 324)
 $splash.StartPosition    = 'CenterScreen'
 $splash.FormBorderStyle  = 'None'
 $splash.ShowInTaskbar    = $false
 $splash.TopMost          = $true
-$splash.BackColor        = [System.Drawing.Color]::FromArgb(30, 64, 124)
+$splash.BackColor        = [System.Drawing.Color]::FromArgb(15, 15, 15)
 
 $iconBmp = $null
 if (Test-Path $iconPath) {
@@ -82,55 +82,55 @@ $splash.Add_Paint({
     $rect = New-Object System.Drawing.Rectangle(0, 0, $w, $h)
     $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
         $rect,
-        [System.Drawing.Color]::FromArgb(50, 110, 195),
-        [System.Drawing.Color]::FromArgb(20, 50, 110),
+        [System.Drawing.Color]::FromArgb(31, 31, 31),
+        [System.Drawing.Color]::FromArgb(5, 5, 5),
         [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
     $g.FillRectangle($brush, $rect)
     $brush.Dispose()
 
-    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(140, 255, 255, 255), 1)
+    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(80, 255, 255, 255), 1)
     $g.DrawRectangle($pen, 0, 0, $w - 1, $h - 1)
     $pen.Dispose()
 
     $bmp = $sender.Tag
     if ($bmp) {
-        $iconSize = 96
+        $iconSize = 115
         $iconX = [int](($w - $iconSize) / 2)
-        $g.DrawImage($bmp, $iconX, 22, $iconSize, $iconSize)
+        $g.DrawImage($bmp, $iconX, 26, $iconSize, $iconSize)
     }
 })
 
 $lblName = New-Object System.Windows.Forms.Label
 $lblName.Text       = 'Planejamento de Ferias'
-$lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 18, [System.Drawing.FontStyle]::Bold)
+$lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 22, [System.Drawing.FontStyle]::Bold)
 $lblName.ForeColor  = [System.Drawing.Color]::White
 $lblName.BackColor  = [System.Drawing.Color]::Transparent
 $lblName.AutoSize   = $false
 $lblName.TextAlign  = 'MiddleCenter'
-$lblName.Location   = New-Object System.Drawing.Point(0, 130)
-$lblName.Size       = New-Object System.Drawing.Size(440, 38)
+$lblName.Location   = New-Object System.Drawing.Point(0, 156)
+$lblName.Size       = New-Object System.Drawing.Size(528, 46)
 $splash.Controls.Add($lblName)
 
 $lblAuthor = New-Object System.Windows.Forms.Label
 $lblAuthor.Text       = "Desenvolvido por $AUTOR_FIXO"
-$lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Italic)
-$lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 215, 240)
+$lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]::Italic)
+$lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 200, 200)
 $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent
 $lblAuthor.AutoSize   = $false
 $lblAuthor.TextAlign  = 'MiddleCenter'
-$lblAuthor.Location   = New-Object System.Drawing.Point(0, 175)
-$lblAuthor.Size       = New-Object System.Drawing.Size(440, 22)
+$lblAuthor.Location   = New-Object System.Drawing.Point(0, 210)
+$lblAuthor.Size       = New-Object System.Drawing.Size(528, 26)
 $splash.Controls.Add($lblAuthor)
 
 $lblVersion = New-Object System.Windows.Forms.Label
 $lblVersion.Text       = 'v1.0.0'
-$lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 8)
-$lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(160, 180, 215)
+$lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 10)
+$lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(140, 140, 140)
 $lblVersion.BackColor  = [System.Drawing.Color]::Transparent
 $lblVersion.AutoSize   = $false
 $lblVersion.TextAlign  = 'MiddleCenter'
-$lblVersion.Location   = New-Object System.Drawing.Point(0, 230)
-$lblVersion.Size       = New-Object System.Drawing.Size(440, 18)
+$lblVersion.Location   = New-Object System.Drawing.Point(0, 276)
+$lblVersion.Size       = New-Object System.Drawing.Size(528, 22)
 $splash.Controls.Add($lblVersion)
 
 $splash.Show()

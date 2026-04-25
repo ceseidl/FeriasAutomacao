@@ -124,7 +124,7 @@ $pb.Visible = $false
 $form.Controls.Add($pb)
 
 $lblAutoria = New-Object System.Windows.Forms.Label
-$lblAutoria.Text = "Criado por $AUTOR_FIXO"
+$lblAutoria.Text = "Desenvolvido por $AUTOR_FIXO"
 $lblAutoria.Location = New-Object System.Drawing.Point(15, 295)
 $lblAutoria.Size = New-Object System.Drawing.Size(220, 20)
 $lblAutoria.Font = New-Object System.Drawing.Font('Segoe UI', 8, [System.Drawing.FontStyle]::Italic)

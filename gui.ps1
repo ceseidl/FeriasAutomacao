@@ -42,14 +42,14 @@ function Show-SplashScreen {
 
     $splash = New-Object System.Windows.Forms.Form
     $splash.Text             = ''
-    $splash.Size             = New-Object System.Drawing.Size(440, 270)
+    $splash.Size             = New-Object System.Drawing.Size(528, 324)
     $splash.StartPosition    = 'CenterScreen'
     $splash.FormBorderStyle  = 'None'
     $splash.ShowInTaskbar    = $false
     $splash.TopMost          = $true
     $splash.UseWaitCursor    = $true
     $splash.Cursor           = [System.Windows.Forms.Cursors]::WaitCursor
-    $splash.BackColor        = [System.Drawing.Color]::FromArgb(30, 64, 124)
+    $splash.BackColor        = [System.Drawing.Color]::FromArgb(15, 15, 15)
 
     # Pre-carrega o icone como bitmap em alta resolucao.
     # O ICO tem entradas PNG-encoded para 64+ que System.Drawing.Icon.ToBitmap()
@@ -98,64 +98,64 @@ function Show-SplashScreen {
         $w = $sender.ClientSize.Width
         $h = $sender.ClientSize.Height
 
-        # Gradiente azul de cima para baixo
+        # Gradiente preto/cinza-escuro (paleta AI/R)
         $rect = New-Object System.Drawing.Rectangle(0, 0, $w, $h)
         $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
             $rect,
-            [System.Drawing.Color]::FromArgb(50, 110, 195),
-            [System.Drawing.Color]::FromArgb(20, 50, 110),
+            [System.Drawing.Color]::FromArgb(31, 31, 31),
+            [System.Drawing.Color]::FromArgb(5, 5, 5),
             [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
         $g.FillRectangle($brush, $rect)
         $brush.Dispose()
 
         # Borda sutil
-        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(140, 255, 255, 255), 1)
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(80, 255, 255, 255), 1)
         $g.DrawRectangle($pen, 0, 0, $w - 1, $h - 1)
         $pen.Dispose()
 
         # Icone centralizado (recuperado via Tag do form)
         $bmp = $sender.Tag
         if ($bmp) {
-            $iconSize = 96
+            $iconSize = 115
             $iconX = [int](($w - $iconSize) / 2)
-            $g.DrawImage($bmp, $iconX, 22, $iconSize, $iconSize)
+            $g.DrawImage($bmp, $iconX, 26, $iconSize, $iconSize)
         }
     })
 
     # Nome do app
     $lblName = New-Object System.Windows.Forms.Label
     $lblName.Text       = $AppName
-    $lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 18, [System.Drawing.FontStyle]::Bold)
+    $lblName.Font       = New-Object System.Drawing.Font('Segoe UI', 22, [System.Drawing.FontStyle]::Bold)
     $lblName.ForeColor  = [System.Drawing.Color]::White
     $lblName.BackColor  = [System.Drawing.Color]::Transparent
     $lblName.AutoSize   = $false
     $lblName.TextAlign  = 'MiddleCenter'
-    $lblName.Location   = New-Object System.Drawing.Point(0, 130)
-    $lblName.Size       = New-Object System.Drawing.Size(440, 38)
+    $lblName.Location   = New-Object System.Drawing.Point(0, 156)
+    $lblName.Size       = New-Object System.Drawing.Size(528, 46)
     $splash.Controls.Add($lblName)
 
     # Feito por
     $lblAuthor = New-Object System.Windows.Forms.Label
     $lblAuthor.Text       = "Desenvolvido por $Author"
-    $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Italic)
-    $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 215, 240)
+    $lblAuthor.Font       = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]::Italic)
+    $lblAuthor.ForeColor  = [System.Drawing.Color]::FromArgb(200, 200, 200)
     $lblAuthor.BackColor  = [System.Drawing.Color]::Transparent
     $lblAuthor.AutoSize   = $false
     $lblAuthor.TextAlign  = 'MiddleCenter'
-    $lblAuthor.Location   = New-Object System.Drawing.Point(0, 175)
-    $lblAuthor.Size       = New-Object System.Drawing.Size(440, 22)
+    $lblAuthor.Location   = New-Object System.Drawing.Point(0, 210)
+    $lblAuthor.Size       = New-Object System.Drawing.Size(528, 26)
     $splash.Controls.Add($lblAuthor)
 
     # Versao discreta no rodape
     $lblVersion = New-Object System.Windows.Forms.Label
     $lblVersion.Text       = 'v1.0.0'
-    $lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 8)
-    $lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(160, 180, 215)
+    $lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 10)
+    $lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(140, 140, 140)
     $lblVersion.BackColor  = [System.Drawing.Color]::Transparent
     $lblVersion.AutoSize   = $false
     $lblVersion.TextAlign  = 'MiddleCenter'
-    $lblVersion.Location   = New-Object System.Drawing.Point(0, 230)
-    $lblVersion.Size       = New-Object System.Drawing.Size(440, 18)
+    $lblVersion.Location   = New-Object System.Drawing.Point(0, 276)
+    $lblVersion.Size       = New-Object System.Drawing.Size(528, 22)
     $splash.Controls.Add($lblVersion)
 
     $splash.Show()
@@ -180,7 +180,7 @@ function Show-SplashScreen {
 }
 
 $splashIconPath = Join-Path $scriptDir 'assets\icon.ico'
-Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 15000
+Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPath $splashIconPath -DurationMs 2500
 
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
@@ -285,7 +285,7 @@ $form.Controls.Add($pb)
 
 # ---- Rodape: "Criado por Carlos Seidl" ----
 $lblAutoria = New-Object System.Windows.Forms.Label
-$lblAutoria.Text = "Criado por $AUTOR_FIXO"
+$lblAutoria.Text = "Desenvolvido por $AUTOR_FIXO"
 $lblAutoria.Location = New-Object System.Drawing.Point(15, 295)
 $lblAutoria.Size = New-Object System.Drawing.Size(220, 20)
 $lblAutoria.Font = New-Object System.Drawing.Font('Segoe UI', 8, [System.Drawing.FontStyle]::Italic)
