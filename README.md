@@ -196,6 +196,21 @@ Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa 
 | `ImportExcel` falha ao instalar | Rodar PowerShell como admin: `Install-Module ImportExcel -Scope CurrentUser -Force` |
 | Erro de execucao de script (politica) | `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` |
 | Warning `Could not fetch resource ... certificate has unknown CA` | Esperado em rede corporativa com MITM. O HTML carrega o Mermaid no navegador, fora do proxy — funciona normal ao abrir |
+| App parou de abrir / arquivo da pasta de instalacao foi deletado | Reparar a instalacao: rodar de novo o `.msi` do release (oferece "Repair") **ou** abrir um console e executar `msiexec /f "<caminho-do-FeriasAutomacao.msi>"`. Como alternativa, desinstalar pelo Painel de Controle e reinstalar |
+
+---
+
+## Melhorias futuras
+
+Lista de ideias mapeadas mas nao priorizadas: **[TODO.md](TODO.md)**.
+
+Item atual em estudo:
+
+- **Self-healing real do MSI** — hoje o MSI nao auto-recupera arquivos
+  deletados da pasta de instalacao (atalhos sao non-advertised). Workaround
+  via `msiexec /f` esta documentado na tabela de Troubleshooting acima. Pra
+  habilitar self-heal automatico precisaria de um launcher EXE + atalhos
+  advertised. Detalhes e plano completo no [TODO.md](TODO.md).
 
 ---
 
