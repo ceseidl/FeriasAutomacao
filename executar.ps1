@@ -256,6 +256,238 @@ function Read-XlsxRows([string]$Path) {
     return , $data
 }
 
+function Read-IntegrantesRows([string]$Path) {
+    # Le a aba 'Integrantes' (cadastro mestre dos colaboradores). Usado pela
+    # secao "Controle de Vencimento de Ferias" pra calcular 1o e 2o vencimento
+    # CLT por pessoa. A aba sempre existe (validada por Test-FeriasTemplate),
+    # mas pode estar com a estrutura antiga (sem as colunas Data de inicio
+    # na AIR / Data das ultimas ferias) -- nesse caso a secao mostra um aviso.
+    Import-Module ImportExcel -ErrorAction Stop | Out-Null
+    $data = Import-Excel -Path $Path -WorksheetName 'Integrantes' -ErrorAction Stop
+    return , $data
+}
+
+function ConvertTo-DateOrNull([object]$v) {
+    # Converte valor de celula (datetime, OLE serial, string varias) pra
+    # [datetime] ou $null se vazio/invalido. Usado pra normalizar as colunas
+    # de data da aba Integrantes que podem vir em formatos diferentes
+    # dependendo de como o usuario digitou.
+    if ($null -eq $v -or "$v" -eq '') { return $null }
+    if ($v -is [datetime]) { return $v }
+    if ($v -is [double] -or $v -is [int]) {
+        try { return [datetime]::FromOADate([double]$v) } catch { return $null }
+    }
+    $s = "$v".Trim()
+    if ($s -eq '') { return $null }
+    $dt = [datetime]::MinValue
+    $formats = 'dd/MM/yyyy','yyyy-MM-dd','MM/dd/yyyy','dd-MM-yyyy','dd/MM/yy'
+    if ([datetime]::TryParseExact($s, $formats, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$dt)) {
+        return $dt
+    }
+    if ([datetime]::TryParse($s, [ref]$dt)) { return $dt }
+    return $null
+}
+
+function Format-Duration([int]$dias) {
+    # Formata uma quantidade de dias como "X dia(s)" ou "~X mes(es)",
+    # dependendo da magnitude. Negativo vira "ha", positivo vira "em".
+    # Pluraliza corretamente (1 dia, 2 dias / 1 mes, 2 meses).
+    $abs = [Math]::Abs($dias)
+    if ($abs -le 30) {
+        $u = if ($abs -eq 1) { 'dia' } else { 'dias' }
+        if ($dias -lt 0) { return "ha $abs $u" } else { return "em $abs $u" }
+    }
+    $meses = [int][Math]::Round($abs / 30.44)
+    if ($meses -le 0) { $meses = 1 }
+    $u = if ($meses -eq 1) { 'mes' } else { 'meses' }
+    if ($dias -lt 0) { return "ha $meses $u" } else { return "em $meses $u" }
+}
+
+function Build-VencimentosSection {
+    # Monta o markdown da secao "Controle de Vencimento de Ferias" a partir
+    # do cadastro de integrantes. Logica:
+    #
+    #   Para cada pessoa, determina o inicio do periodo aquisitivo atual:
+    #     * Se "Data das ultimas ferias" preenchida -> usa essa data + 1 dia
+    #       (ciclo aquisitivo novo comeca no dia seguinte ao fim das ferias)
+    #     * Senao se "Data de inicio na AIR" preenchida -> usa essa data
+    #       (pessoa nunca tirou ferias, ciclo conta da admissao)
+    #     * Senao -> bloco "Dados incompletos"
+    #
+    #   1o vencimento = inicio + 12 meses (CLT: pessoa adquire o direito)
+    #   2o vencimento = inicio + 24 meses (CLT: ferias vencem em dobro)
+    #
+    # Janela de alerta: 6 meses antes de cada vencimento.
+    #
+    # Classificacao (mais critico primeiro):
+    #   * 2o vencimento <= hoje + 6 meses (incluindo passado) -> CRITICO
+    #   * 1o vencimento <= hoje + 6 meses (incluindo passado) -> ATENCAO
+    #   * Caso contrario -> nao aparece (em dia)
+    #
+    # Pessoa entra so no bloco mais critico aplicavel (sem duplicar).
+    param(
+        [object[]]$Integrantes,
+        [datetime]$Hoje
+    )
+
+    $LIMITE_DIAS = 183  # ~6 meses
+
+    # Detecta se a planilha esta na versao antiga (sem as colunas novas).
+    # Se nao tiver as 2 colunas, todo mundo cai em dados incompletos e
+    # mostramos um aviso no topo da secao.
+    $temColunaAdm = $false
+    $temColunaUlt = $false
+    if ($Integrantes -and $Integrantes.Count -gt 0) {
+        $cols = ($Integrantes[0] | Get-Member -MemberType NoteProperty).Name
+        $temColunaAdm = $cols -contains 'Data de inicio na AIR'
+        $temColunaUlt = $cols -contains 'Data das ultimas ferias'
+    }
+
+    $criticos    = @()
+    $atencao     = @()
+    $incompletos = @()
+
+    foreach ($pessoa in $Integrantes) {
+        $nome = "$($pessoa.Integrante)".Trim()
+        if (-not $nome) { continue }
+        $squad = "$($pessoa.Squad)".Trim()
+
+        $dataAdm = if ($temColunaAdm) { ConvertTo-DateOrNull $pessoa.'Data de inicio na AIR' } else { $null }
+        $dataUlt = if ($temColunaUlt) { ConvertTo-DateOrNull $pessoa.'Data das ultimas ferias' } else { $null }
+
+        $referencia = $null
+        $tipoRef    = ''
+        if ($dataUlt) {
+            $referencia = $dataUlt.AddDays(1)
+            $tipoRef    = "Ult.ferias " + $dataUlt.ToString('dd/MM/yyyy')
+        } elseif ($dataAdm) {
+            $referencia = $dataAdm
+            $tipoRef    = "Adm. " + $dataAdm.ToString('dd/MM/yyyy')
+        } else {
+            # Sem nenhuma data -> dados incompletos. So consideramos "Data de
+            # admissao ausente" porque a coluna de ultimas ferias vazia eh
+            # esperada pra quem nunca tirou ferias.
+            $faltando = @()
+            if (-not $temColunaAdm) { $faltando += 'Coluna "Data de inicio na AIR" ausente na planilha' }
+            elseif (-not $dataAdm)  { $faltando += 'Data de admissao ausente' }
+            if (-not $temColunaUlt) { $faltando += 'Coluna "Data das ultimas ferias" ausente na planilha' }
+            $incompletos += [pscustomobject]@{
+                Colaborador     = $nome
+                Squad           = $squad
+                ColunasAusentes = ($faltando -join '; ')
+            }
+            continue
+        }
+
+        $venc1 = $referencia.AddYears(1)
+        $venc2 = $referencia.AddYears(2)
+        $diasAteVenc1 = [int]([Math]::Floor(($venc1 - $Hoje).TotalDays))
+        $diasAteVenc2 = [int]([Math]::Floor(($venc2 - $Hoje).TotalDays))
+
+        $row = [pscustomobject]@{
+            Colaborador = $nome
+            Squad       = $squad
+            Referencia  = $tipoRef
+            Venc1       = $venc1.ToString('dd/MM/yyyy')
+            Venc2       = $venc2.ToString('dd/MM/yyyy')
+            DiasOrdem   = 0
+            Situacao    = ''
+        }
+
+        if ($diasAteVenc2 -le $LIMITE_DIAS) {
+            # 2o vencimento atingido ou dentro da janela -> CRITICO
+            $row.DiasOrdem = $diasAteVenc2
+            if ($diasAteVenc2 -lt 0) {
+                $row.Situacao = "EM DOBRO " + (Format-Duration $diasAteVenc2)
+            } else {
+                $row.Situacao = "2o venc. " + (Format-Duration $diasAteVenc2)
+            }
+            $criticos += $row
+        } elseif ($diasAteVenc1 -le $LIMITE_DIAS) {
+            # 1o vencimento atingido ou dentro da janela -> ATENCAO
+            $row.DiasOrdem = $diasAteVenc1
+            if ($diasAteVenc1 -lt 0) {
+                $row.Situacao = "1o venc. atingido " + (Format-Duration $diasAteVenc1)
+            } else {
+                $row.Situacao = "1o venc. " + (Format-Duration $diasAteVenc1)
+            }
+            $atencao += $row
+        }
+        # else: em dia -- nao aparece na secao
+    }
+
+    # Ordena cada bloco do mais critico (menor DiasOrdem) pro menos
+    $criticos    = @($criticos    | Sort-Object DiasOrdem)
+    $atencao     = @($atencao     | Sort-Object DiasOrdem)
+    $incompletos = @($incompletos | Sort-Object Colaborador)
+
+    # Monta o markdown da secao.
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('## 🚨 Controle de Vencimento de Férias')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("Referencia: hoje = **" + $Hoje.ToString('dd/MM/yyyy') + "**. Janela de alerta: **6 meses** antes de cada vencimento.")
+    [void]$sb.AppendLine('')
+
+    if (-not $temColunaAdm -or -not $temColunaUlt) {
+        [void]$sb.AppendLine('> ⚠️ **Atualize a planilha.** A aba `Integrantes` nao tem as colunas')
+        [void]$sb.AppendLine('> `Data de inicio na AIR` e/ou `Data das ultimas ferias`. Sem elas o app nao')
+        [void]$sb.AppendLine('> consegue calcular os vencimentos. Baixe o template oficial atualizado e')
+        [void]$sb.AppendLine('> copie seus dados pra ele.')
+        [void]$sb.AppendLine('')
+    }
+
+    $algumBloco = $false
+
+    if ($criticos.Count -gt 0) {
+        $algumBloco = $true
+        [void]$sb.AppendLine('### 🔴 CRITICO -- Ferias com 2o vencimento proximo ou vencido')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('*Em dobro / urgente -- precisam tirar ferias agora.*')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('| Colaborador | Squad | Ult. ferias / Adm. | 1o venc. | 2o venc. | Situacao |')
+        [void]$sb.AppendLine('| :--- | :--- | :--- | :---: | :---: | :--- |')
+        foreach ($r in $criticos) {
+            [void]$sb.AppendLine("| **$($r.Colaborador)** | $($r.Squad) | $($r.Referencia) | $($r.Venc1) | **$($r.Venc2)** | **$($r.Situacao)** |")
+        }
+        [void]$sb.AppendLine('')
+    }
+
+    if ($atencao.Count -gt 0) {
+        $algumBloco = $true
+        [void]$sb.AppendLine('### 🟠 ATENCAO -- Ferias com 1o vencimento proximo ou atingido')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('*Ja pode (e deve) comecar a tirar ferias.*')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('| Colaborador | Squad | Ult. ferias / Adm. | 1o venc. | 2o venc. | Situacao |')
+        [void]$sb.AppendLine('| :--- | :--- | :--- | :---: | :---: | :--- |')
+        foreach ($r in $atencao) {
+            [void]$sb.AppendLine("| **$($r.Colaborador)** | $($r.Squad) | $($r.Referencia) | **$($r.Venc1)** | $($r.Venc2) | $($r.Situacao) |")
+        }
+        [void]$sb.AppendLine('')
+    }
+
+    if ($incompletos.Count -gt 0) {
+        $algumBloco = $true
+        [void]$sb.AppendLine('### ⚪ Dados incompletos -- atualizar planilha')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('*Colaboradores sem cadastro completo na aba `Integrantes`. Preencha as datas e regere o relatorio pra ver os vencimentos.*')
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('| Colaborador | Squad | O que falta |')
+        [void]$sb.AppendLine('| :--- | :--- | :--- |')
+        foreach ($r in $incompletos) {
+            [void]$sb.AppendLine("| $($r.Colaborador) | $($r.Squad) | $($r.ColunasAusentes) |")
+        }
+        [void]$sb.AppendLine('')
+    }
+
+    if (-not $algumBloco) {
+        [void]$sb.AppendLine('Todos os colaboradores estao em dia. Nenhum vencimento proximo ou atingido.')
+        [void]$sb.AppendLine('')
+    }
+
+    return $sb.ToString().TrimEnd()
+}
+
 function Format-DateBr([object]$v) {
     if ($null -eq $v -or "$v" -eq '') { return '' }
     if ($v -is [datetime]) { return $v.ToString('dd/MM/yyyy') }
@@ -339,6 +571,14 @@ $dashboardTable = @"
 $($dashboardLines -join "`n")
 "@
 
+# 2.5 Controle de Vencimento de Ferias (CLT 12/24 meses)
+# Le a aba Integrantes -- cadastro mestre com Data de admissao e Data fim
+# das ultimas ferias por pessoa. A funcao Build-VencimentosSection classifica
+# cada um em CRITICO (2o vencimento proximo/passado), ATENCAO (1o vencimento
+# proximo/atingido) ou Dados incompletos (sem data de admissao).
+$integrantesRaw = Read-IntegrantesRows -Path $XlsxPath
+$vencimentosSection = Build-VencimentosSection -Integrantes $integrantesRaw -Hoje (Get-Date)
+
 # 3. Cronograma detalhado
 $cronogramaLines = foreach ($r in $rows) {
     $icon = $statusIcon[$r.Status]; if (-not $icon) { $icon = '⚪' }
@@ -376,6 +616,7 @@ $template = Get-Content -Path $TemplatePath -Raw -Encoding UTF8
 $now = Get-Date
 $autorLine = "*Criado e compilado por **$Autor** em $($now.ToString('dd/MM/yyyy')) às $($now.ToString('HH:mm')).*"
 $md = $template.Replace('<!-- DASHBOARD -->', $dashboardTable).
+                Replace('<!-- VENCIMENTOS -->', $vencimentosSection).
                 Replace('<!-- CRONOGRAMA -->', $cronogramaTable).
                 Replace('<!-- GANTT -->', $ganttBlock).
                 Replace('<!-- AUTOR -->', $autorLine).

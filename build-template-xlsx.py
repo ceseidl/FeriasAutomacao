@@ -108,8 +108,27 @@ ws = reset_sheet('Squads')
 write_table(ws, ['Squad'], squads, 'tblSquads')
 
 # --- 2) Integrantes ----
+# 4 colunas: nome, squad, data de admissao, data fim das ultimas ferias.
+# As 2 colunas de data sao usadas pelo executar.ps1 pra calcular o 1o e 2o
+# vencimento (CLT 12/24 meses) e popular a secao "Controle de Vencimento de
+# Ferias" no relatorio. Vazio = "nunca tirou ferias" (calcula pela admissao)
+# ou "dados incompletos" (se a admissao tambem estiver vazia).
 ws = reset_sheet('Integrantes')
-write_table(ws, ['Integrante', 'Squad'], integrantes, 'tblIntegrantes')
+integrantes_full = [(nome, squad, None, None) for nome, squad in integrantes]
+write_table(
+    ws,
+    ['Integrante', 'Squad', 'Data de inicio na AIR', 'Data das ultimas ferias'],
+    integrantes_full,
+    'tblIntegrantes',
+)
+# Aplica formato dd/mm/aaaa nas duas colunas de data (C e D)
+for col_letter in ('C', 'D'):
+    for row in range(2, max(2, 1 + len(integrantes_full)) + 1):
+        ws[f'{col_letter}{row}'].number_format = 'dd/mm/yyyy'
+# Larguras explicitas pras colunas de data (write_table chuta com base no
+# conteudo, mas pra colunas vazias ele cai no minimo de 12 -- forco maior)
+ws.column_dimensions['C'].width = 22
+ws.column_dimensions['D'].width = 24
 
 # --- 3) Status ----
 ws = reset_sheet('Status')
@@ -164,8 +183,17 @@ linhas = [
     "2. Colunas obrigatorias (nao renomeie): Mes, Colaborador, Squad, Inicio, Fim, Dias, Status.",
     "3. Colaborador, Squad e Status tem dropdowns - eles puxam das abas auxiliares:",
     "     - Squads:      lista de squads disponiveis (use a aba 'Squads' pra adicionar).",
-    "     - Integrantes: lista de pessoas (use a aba 'Integrantes', com nome + squad).",
+    "     - Integrantes: cadastro mestre de pessoas (nome, squad, admissao, ultimas ferias).",
     "     - Status:      Aprovada, Planejada ou Solicitada (aba 'Status').",
+    "3a. Aba 'Integrantes' tem 4 colunas:",
+    "     - Integrante:               nome do colaborador",
+    "     - Squad:                    squad atual",
+    "     - Data de inicio na AIR:    data de admissao na empresa (dd/mm/aaaa)",
+    "     - Data das ultimas ferias:  data fim do ultimo periodo de ferias tirado",
+    "                                 (vazio se a pessoa nunca tirou ferias)",
+    "    Essas datas alimentam a secao 'Controle de Vencimento de Ferias' no",
+    "    relatorio gerado, com 1o e 2o vencimento por colaborador (CLT 12/24 meses).",
+    "    Atualize a 'Data das ultimas ferias' manualmente quando alguem voltar.",
     "4. Pra adicionar um squad/integrante novo, ir na aba correspondente e colar/digitar",
     "   no fim da tabela. O dropdown puxa automaticamente.",
     "5. Mes: use Janeiro, Fevereiro, Março, Abril, Maio, Junho, Julho, Agosto, Setembro,",

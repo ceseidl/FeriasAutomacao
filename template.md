@@ -10,6 +10,10 @@ Gestão de conflitos e visualização de períodos por squad.
 
 ---
 
+<!-- VENCIMENTOS -->
+
+---
+
 ## 🛠 Legenda de Status Individual
 
 | Ícone | Status | Descrição |
