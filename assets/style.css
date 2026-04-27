@@ -1,5 +1,13 @@
 ﻿* { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Header de titulo gerado automaticamente pelo Pandoc a partir das flags
+   --metadata title=... e --metadata author=... no executar.ps1.
+   Esses metadados continuam sendo gravados no <head> (title da aba do
+   navegador, meta name="author" pra SharePoint/buscadores), so escondemos
+   a renderizacao duplicada no body, ja que o titulo principal vem do
+   template.md (com logo AI/R + subtitulo). */
+header#title-block-header { display: none; }
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f5f7fa;
@@ -14,6 +22,16 @@ h1 {
     font-size: 2rem;
     margin-bottom: 8px;
     color: #1a202c;
+}
+
+/* Logo AI/R no titulo principal -- substitui o emoji.
+   currentColor faz o logo herdar a cor do h1 (preto #1a202c).
+   viewBox 99x32 (proporcao ~3:1) ajustado para 1.4em de altura. */
+h1 .logo-air {
+    height: 1.4em;
+    width: auto;
+    vertical-align: -0.18em;
+    margin-right: 0.35em;
 }
 
 h1 + p {
