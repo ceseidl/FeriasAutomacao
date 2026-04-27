@@ -113,17 +113,18 @@
        ================================================== -->
   <Fragment>
     <UI>
-      <!-- Order="999" e essencial: WixUI_InstallDir ja registra outros
-           publish events no botao Finish (DoAction de fechamento, etc).
-           Sem Order, o WiX nao garante que o nosso DoAction roda na hora
-           certa, e na pratica o LaunchApplication acaba sendo ignorado.
-           Order alto = roda DEPOIS dos default = o app e lancado antes
-           do dialog fechar. -->
+      <!-- Order MENOR que 999 e crucial: o WixUI_InstallDir ja registra
+           internamente um Publish EndDialog Return Order=999 no botao
+           Finish do ExitDialog. Se o nosso DoAction tiver Order igual
+           ou maior, o EndDialog fecha o dialog ANTES da nossa
+           CustomAction rodar, e a action e cancelada silenciosamente.
+           Order=100 garante que rodamos PRIMEIRO, depois o EndDialog
+           default (Order=999) fecha o instalador. -->
       <Publish Dialog="ExitDialog"
                Control="Finish"
                Event="DoAction"
                Value="LaunchApplication"
-               Order="999"
+               Order="100"
                Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
     </UI>
   </Fragment>
