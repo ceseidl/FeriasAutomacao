@@ -52,20 +52,23 @@
 
     <!-- Checkbox no ExitDialog: "Iniciar Ferias Automacao agora".
          Marcado por default. Se o usuario deixar marcado e clicar
-         "Finish", invoca diretamente o powershell.exe com o gui.ps1
-         como argumento. CustomAction tipo 50 (Directory + ExeCommand)
-         garante que o shell e executado de fato com argumentos. O
-         tipo 18 (FileRef) tentava executar o .bat diretamente, mas
-         .bat precisa do cmd.exe interpretador, e isso falhava em
-         silencio. Async pra nao travar o instalador esperando a
-         janela do app fechar. -->
+         "Finish", roda o gui.ps1 via PowerShell.
+
+         Implementacao: CustomActionRef Wix4WixSilentExec_X64 da extensao
+         WixToolset.Util.wixext. Essa CA tem suporte de primeira classe
+         a launch app no fim do install. Internamente chama CreateProcess
+         com a command line da property WixSilentExecCmdLine, no contexto
+         do usuario que esta rodando o instalador (nao do SYSTEM), entao
+         a janela aparece pra ele. Tentativas anteriores com CustomAction
+         inline (FileRef vazio, depois Directory + ExeCommand) falharam
+         silenciosamente. A Util extension resolve esses edge cases. -->
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Iniciar Ferias Automacao agora" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
     <CustomAction Id="LaunchApplication"
                   Directory="INSTALLFOLDER"
-                  ExeCommand='"[System64Folder]WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
+                  ExeCommand='"[System64Folder]cmd.exe" /c "[INSTALLFOLDER]Gerar Relatorio.bat"'
                   Execute="immediate"
-                  Return="asyncNoWait"
+                  Return="ignore"
                   Impersonate="yes" />
 
     <!-- Feature raiz: aplicativo principal (obrigatorio).

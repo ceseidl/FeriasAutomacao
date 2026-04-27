@@ -7,7 +7,7 @@
 .DESCRIPTION
     Pre-requisito: WiX 4 instalado como dotnet global tool:
         dotnet tool install --global wix --version 4.0.6
-        wix extension add WixToolset.UI.wixext/4.0.6 --global
+        wix extension add --global WixToolset.UI.wixext/4.0.6
 
     Saida: installer\output\FeriasAutomacao-1.0.0.msi
 
