@@ -52,6 +52,18 @@ try {
     Pop-Location
 }
 
+# Copia o MANUAL.docx pra pasta de saida ao lado do MSI. Assim quem for
+# distribuir (SharePoint, e-mail, GitHub Release) tem o pacote completo
+# numa pasta so: instalador + manual do usuario.
+$manualSrc = Join-Path $repoRoot 'docs\MANUAL.docx'
+$manualDst = Join-Path $outDir   'MANUAL.docx'
+if (Test-Path $manualSrc) {
+    Copy-Item -Path $manualSrc -Destination $manualDst -Force
+    Write-Host "Manual copiado: $manualDst" -ForegroundColor DarkGray
+} else {
+    Write-Host "Aviso: $manualSrc nao encontrado, pulando copia do manual." -ForegroundColor Yellow
+}
+
 # Resumo
 $tamanhoMb = [math]::Round((Get-Item $msi).Length / 1MB, 2)
 Write-Host ""
@@ -59,3 +71,6 @@ Write-Host "============================================================" -Foreg
 Write-Host (" MSI gerado: {0} MB" -f $tamanhoMb)                          -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ("  {0}" -f $msi)
+if (Test-Path $manualDst) {
+    Write-Host ("  {0}" -f $manualDst)
+}

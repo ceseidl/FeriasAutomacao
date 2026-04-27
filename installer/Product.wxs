@@ -50,6 +50,20 @@
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
+    <!-- Checkbox no ExitDialog: "Iniciar Ferias Automacao agora".
+         Marcado por default. Se o usuario deixar marcado e clicar
+         "Finish", roda o Gerar Relatorio.bat (que invoca o gui.ps1
+         via PowerShell). Custom action assincrona pra nao travar o
+         instalador esperando a janela fechar. -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Iniciar Ferias Automacao agora" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <CustomAction Id="LaunchApplication"
+                  FileRef="AppGerarRelatorioBat"
+                  ExeCommand=""
+                  Execute="immediate"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+
     <!-- Feature raiz: aplicativo principal (obrigatorio).
          Filhos: 3 features opcionais pros locais de atalho. Por padrao
          tudo instalado; o usuario pode desmarcar o que nao quer. -->
@@ -89,6 +103,21 @@
   </Package>
 
   <!-- ==================================================
+       Liga o checkbox do ExitDialog ao CustomAction LaunchApplication.
+       Precisa estar dentro de um Fragment (nao pode ser filho direto
+       do Package em WiX 4).
+       ================================================== -->
+  <Fragment>
+    <UI>
+      <Publish Dialog="ExitDialog"
+               Control="Finish"
+               Event="DoAction"
+               Value="LaunchApplication"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
+  </Fragment>
+
+  <!-- ==================================================
        Estrutura de pastas
        ================================================== -->
   <Fragment>
@@ -103,7 +132,10 @@
     </StandardDirectory>
 
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="StartMenuGroup" Name="Ferias Automacao" />
+      <!-- Pasta no Menu Iniciar identificada pela marca da empresa.
+           Espaco no lugar da barra ('AI R' em vez de 'AI/R') porque
+           Windows nao permite '/' em nome de pasta. -->
+      <Directory Id="StartMenuGroup" Name="AI R" />
     </StandardDirectory>
 
     <StandardDirectory Id="DesktopFolder" />
@@ -131,7 +163,7 @@
         <File Source="..\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
       </Component>
       <Component>
-        <File Source="..\Gerar Relatorio.bat" KeyPath="yes" />
+        <File Id="AppGerarRelatorioBat" Source="..\Gerar Relatorio.bat" KeyPath="yes" />
       </Component>
     </ComponentGroup>
 
@@ -216,6 +248,24 @@
             Root="HKCU"
             Key="Software\FeriasAutomacao\Shortcuts"
             Name="StartMenuPasta"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+
+      <!-- Atalho de desinstalar: dispara msiexec /x com o ProductCode
+           do app, abrindo o assistente padrao do Windows pra remover. -->
+      <Component Id="ShortcutDesinstalar" Guid="*">
+        <Shortcut
+            Id="ShortcutDesinstalarLnk"
+            Name="Desinstalar Ferias Automacao"
+            Description="Remove o Ferias Automacao deste computador"
+            Target="[System64Folder]msiexec.exe"
+            Arguments='/x "[ProductCode]"' />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\FeriasAutomacao\Shortcuts"
+            Name="StartMenuDesinstalar"
             Type="integer"
             Value="1"
             KeyPath="yes" />
