@@ -71,19 +71,17 @@
       <ComponentGroupRef Id="AppAssets" />
       <ComponentGroupRef Id="AppBin" />
       <ComponentGroupRef Id="AppDocs" />
+      <!-- Atalho do Desktop e OBRIGATORIO. Faz parte da feature Main
+           (que tem AllowAbsent="no") em vez de uma sub-feature opcional,
+           pra garantir que toda instalacao ganha o atalho na area de
+           trabalho do usuario, sem opcao de desmarcar. -->
+      <ComponentGroupRef Id="AppShortcutsDesktop" />
 
       <Feature Id="ShortcutsStartMenu"
                Title="Atalhos no Menu Iniciar"
-               Description="Cria atalhos em 'Programas > Ferias Automacao' (Gerar Relatorio, Manual, Pasta de instalacao). Recomendado."
+               Description="Cria atalhos em 'AI R' (Gerar Relatorio, Manual, Pasta de instalacao, Desinstalar). Recomendado."
                Level="1">
         <ComponentGroupRef Id="AppShortcutsStartMenu" />
-      </Feature>
-
-      <Feature Id="ShortcutsDesktop"
-               Title="Atalho na Area de Trabalho"
-               Description="Cria 'Gerar Relatorio' diretamente na Area de Trabalho."
-               Level="1">
-        <ComponentGroupRef Id="AppShortcutsDesktop" />
       </Feature>
 
       <Feature Id="ShortcutsSendTo"
