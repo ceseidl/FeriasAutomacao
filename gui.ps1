@@ -469,7 +469,11 @@ Show-SplashScreen -AppName 'Planejamento de Ferias' -Author $AUTOR_FIXO -IconPat
 # ================== Form ==================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Planejamento de Ferias - Gerador'
-$form.Size = New-Object System.Drawing.Size(580, 400)
+# ClientSize (em vez de Size) controla a area UTIL interna -- assim a janela
+# tem o mesmo espaco util em qualquer DPI (100%, 125%, 150%) sem ter os
+# controles cortados pela borda. Total fisico = ClientSize + bordas.
+$form.ClientSize = New-Object System.Drawing.Size(580, 405)
+$form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
