@@ -45,4 +45,48 @@ abrir do nada". Hoje nao tem evidencia de que isso acontece com frequencia.
 
 ## Outras ideias (sem prioridade)
 
-<!-- adicionar aqui conforme aparecer -->
+### [ ] Re-adicionar checkbox "Iniciar Ferias Automacao agora" no fim do instalador
+
+**Contexto:** chegou a ser implementado, mas em **4 abordagens diferentes** o
+checkbox nunca disparou o `gui.ps1` no clique do Finish:
+
+1. `<CustomAction FileRef="AppGerarRelatorioBat" ExeCommand="">` (tipo 18)
+   -> WiX executa o `.bat` direto via CreateProcess, mas `.bat` precisa do
+   `cmd.exe` interpretador.
+2. `<CustomAction Directory="INSTALLFOLDER" ExeCommand='"...powershell.exe" ... -File "...gui.ps1"'>` com `Return="asyncNoWait"` (tipo 50) -> nao
+   disparou.
+3. `Order="100"` no `<Publish>` (pra rodar antes do `EndDialog Order=999`
+   default do `WixUI_InstallDir`) -> Order ficou correto, mas a CA continuou
+   nao sendo invocada.
+4. `<CustomAction Directory="INSTALLFOLDER" ExeCommand='cmd.exe /c "...Gerar Relatorio.bat"'>` -> cmd.exe deveria sair logo apos `start /b`, mas o app
+   ainda assim nao abriu.
+
+**Tentativa que NAO foi feita ainda:** usar a `WixToolset.Util.wixext` com
+`WixSilentExec` ou `WixShellExec` apontando pra um `.lnk` gerado durante
+o install. A extensao foi instalada mas nao usei a CA dela direito (o nome
+`Wix4WixSilentExec_X64` nao bateu em `<CustomActionRef>`).
+
+**Pra retomar:** o usuario vai pesquisar a forma canonica de "launch app
+after install" em WiX 4.0.6 e me passa o approach correto. Sao 3 elementos
+que precisam coexistir:
+
+```xml
+<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Iniciar agora" />
+<CustomAction Id="LaunchApplication" ... />
+<UI>
+  <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction"
+           Value="LaunchApplication" Order="100"
+           Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+</UI>
+```
+
+O ponto que falta acertar e o `<CustomAction>` -- que metodo do MSI roda
+um processo externo (powershell+args) DETACHADO de forma que dispare via
+DoAction de UI no contexto per-user.
+
+**Referencias:**
+- https://wixtoolset.org/docs/v4/
+- https://github.com/wixtoolset/issues/issues/7674 (discussion sobre
+  WixUI_InstallDir + LaunchApplication em WiX 4)
+

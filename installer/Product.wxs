@@ -50,26 +50,12 @@
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
-    <!-- Checkbox no ExitDialog: "Iniciar Ferias Automacao agora".
-         Marcado por default. Se o usuario deixar marcado e clicar
-         "Finish", roda o gui.ps1 via PowerShell.
-
-         Implementacao: CustomActionRef Wix4WixSilentExec_X64 da extensao
-         WixToolset.Util.wixext. Essa CA tem suporte de primeira classe
-         a launch app no fim do install. Internamente chama CreateProcess
-         com a command line da property WixSilentExecCmdLine, no contexto
-         do usuario que esta rodando o instalador (nao do SYSTEM), entao
-         a janela aparece pra ele. Tentativas anteriores com CustomAction
-         inline (FileRef vazio, depois Directory + ExeCommand) falharam
-         silenciosamente. A Util extension resolve esses edge cases. -->
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Iniciar Ferias Automacao agora" />
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
-    <CustomAction Id="LaunchApplication"
-                  Directory="INSTALLFOLDER"
-                  ExeCommand='"[System64Folder]cmd.exe" /c "[INSTALLFOLDER]Gerar Relatorio.bat"'
-                  Execute="immediate"
-                  Return="ignore"
-                  Impersonate="yes" />
+    <!-- TODO: checkbox "Iniciar Ferias Automacao agora" no ExitDialog.
+         Removido temporariamente. 4 abordagens diferentes nao
+         funcionaram (FileRef do .bat, Directory+ExeCommand com
+         powershell direto, util:WixSilentExec, cmd.exe /c .bat).
+         Ate descobrir o approach certo, o usuario abre manualmente
+         pelo atalho do Menu Iniciar ou Desktop apos instalar. -->
 
     <!-- Feature raiz: aplicativo principal (obrigatorio).
          Filhos: 3 features opcionais pros locais de atalho. Por padrao
@@ -108,29 +94,6 @@
       </Feature>
     </Feature>
   </Package>
-
-  <!-- ==================================================
-       Liga o checkbox do ExitDialog ao CustomAction LaunchApplication.
-       Precisa estar dentro de um Fragment (nao pode ser filho direto
-       do Package em WiX 4).
-       ================================================== -->
-  <Fragment>
-    <UI>
-      <!-- Order MENOR que 999 e crucial: o WixUI_InstallDir ja registra
-           internamente um Publish EndDialog Return Order=999 no botao
-           Finish do ExitDialog. Se o nosso DoAction tiver Order igual
-           ou maior, o EndDialog fecha o dialog ANTES da nossa
-           CustomAction rodar, e a action e cancelada silenciosamente.
-           Order=100 garante que rodamos PRIMEIRO, depois o EndDialog
-           default (Order=999) fecha o instalador. -->
-      <Publish Dialog="ExitDialog"
-               Control="Finish"
-               Event="DoAction"
-               Value="LaunchApplication"
-               Order="100"
-               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
-    </UI>
-  </Fragment>
 
   <!-- ==================================================
        Estrutura de pastas
