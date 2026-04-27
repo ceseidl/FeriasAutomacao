@@ -218,6 +218,28 @@ else:
 
 
 # ============================================================
+# 7) Remove mencao ao checkbox "Iniciar agora" (que foi removido do MSI)
+# ============================================================
+# O update anterior tinha mencionado um checkbox "Iniciar Ferias Automacao
+# agora" no fim do instalador. Esse checkbox foi removido depois (4 tentativas
+# de fazer ele disparar o app falharam). Agora o usuario abre manualmente
+# pelo atalho do Desktop ou Menu Iniciar.
+substituicoes_7 = {
+    'Na tela final do instalador, o checkbox "Iniciar Ferias Automacao agora" ja vem marcado. Se mantiver marcado e clicar Finish, o app abre direto. Desmarcar so se preferir abrir manualmente depois pelo atalho.':
+        'Na tela final, clicar Finish pra concluir a instalacao. Apos o '
+        'instalador fechar, abrir o app pelo atalho "Gerar Relatorio" '
+        '(Area de Trabalho -- sempre criado -- ou Menu Iniciar > AI R).',
+}
+trocas_7 = 0
+for p in doc.paragraphs:
+    txt = p.text.strip()
+    if txt in substituicoes_7:
+        set_text(p, substituicoes_7[txt])
+        trocas_7 += 1
+print(f'(7) Substituidas {trocas_7} mencoes ao checkbox removido.')
+
+
+# ============================================================
 # Salva
 # ============================================================
 doc.save(str(DOCX))
