@@ -41,8 +41,13 @@
         DowngradeErrorMessage="Uma versao mais nova do Ferias Automacao ja esta instalada."
         AllowSameVersionUpgrades="yes" />
 
-    <!-- UI com arvore de features pro usuario escolher onde criar atalhos -->
-    <ui:WixUI Id="WixUI_FeatureTree" />
+    <!-- UI com tela dedicada pra escolher a pasta de instalacao.
+         WixUI_InstallDir mostra: Welcome -> License -> InstallDir (com
+         botao "Browse..." pra mudar a pasta) -> VerifyReady -> Finish.
+         A pasta default e LocalAppDataFolder\Programs\FeriasAutomacao
+         (per-user, sem prompt de UAC), mas o usuario pode trocar pra
+         qualquer outra pasta com permissao de escrita. -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
     <!-- Feature raiz: aplicativo principal (obrigatorio).
@@ -169,7 +174,7 @@
             Id="ShortcutGerarRelatorioLnk"
             Name="Gerar Relatorio"
             Description="Abre o gerador de planejamento de ferias"
-            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
             Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
             WorkingDirectory="INSTALLFOLDER"
             Icon="AppIcon.exe"
@@ -228,7 +233,7 @@
             Id="ShortcutDesktopLnk"
             Name="Gerar Relatorio"
             Description="Abre o gerador de planejamento de ferias"
-            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
             Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
             WorkingDirectory="INSTALLFOLDER"
             Icon="AppIcon.exe"
@@ -254,7 +259,7 @@
             Id="ShortcutSendToLnk"
             Name="Ferias Automacao"
             Description="Envia uma planilha .xlsx pro Ferias Automacao"
-            Target="[%SystemRoot%]\System32\WindowsPowerShell\v1.0\powershell.exe"
+            Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
             Arguments='-ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
             WorkingDirectory="INSTALLFOLDER"
             Icon="AppIcon.exe"
