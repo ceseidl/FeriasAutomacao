@@ -496,14 +496,17 @@ $lblTitle.ForeColor = [System.Drawing.Color]::FromArgb(45, 55, 72)
 $form.Controls.Add($lblTitle)
 
 # ---- Ano (editavel) ----
+# IMPORTANTE: largura 110 nos labels (e 120 no offset dos campos) pra
+# acomodar "Pasta de saida:" sem quebrar em 2 linhas em DPI alto. Em DPI
+# 100% sobra espaco; em DPI 125%+ cabe sem cortar.
 $lblAno = New-Object System.Windows.Forms.Label
 $lblAno.Text = 'Ano:'
 $lblAno.Location = New-Object System.Drawing.Point(15, 55)
-$lblAno.Size = New-Object System.Drawing.Size(75, 22)
+$lblAno.Size = New-Object System.Drawing.Size(105, 22)
 $form.Controls.Add($lblAno)
 
 $btnAno = New-Object System.Windows.Forms.Button
-$btnAno.Location = New-Object System.Drawing.Point(90, 53)
+$btnAno.Location = New-Object System.Drawing.Point(120, 53)
 $btnAno.Size = New-Object System.Drawing.Size(100, 24)
 $btnAno.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnAno.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
@@ -525,12 +528,12 @@ $btnAno.Add_Click({
 $lblXlsx = New-Object System.Windows.Forms.Label
 $lblXlsx.Text = 'Planilha:'
 $lblXlsx.Location = New-Object System.Drawing.Point(15, 88)
-$lblXlsx.Size = New-Object System.Drawing.Size(75, 22)
+$lblXlsx.Size = New-Object System.Drawing.Size(105, 22)
 $form.Controls.Add($lblXlsx)
 
 $txtXlsx = New-Object System.Windows.Forms.TextBox
-$txtXlsx.Location = New-Object System.Drawing.Point(90, 86)
-$txtXlsx.Size = New-Object System.Drawing.Size(375, 22)
+$txtXlsx.Location = New-Object System.Drawing.Point(120, 86)
+$txtXlsx.Size = New-Object System.Drawing.Size(345, 22)
 $txtXlsx.Text = $xlsxDefault
 $form.Controls.Add($txtXlsx)
 
@@ -559,12 +562,12 @@ $form.Controls.Add($btnBrowse)
 $lblOutDir = New-Object System.Windows.Forms.Label
 $lblOutDir.Text = 'Pasta de saida:'
 $lblOutDir.Location = New-Object System.Drawing.Point(15, 121)
-$lblOutDir.Size = New-Object System.Drawing.Size(75, 22)
+$lblOutDir.Size = New-Object System.Drawing.Size(105, 22)
 $form.Controls.Add($lblOutDir)
 
 $txtOutDir = New-Object System.Windows.Forms.TextBox
-$txtOutDir.Location = New-Object System.Drawing.Point(90, 119)
-$txtOutDir.Size = New-Object System.Drawing.Size(375, 22)
+$txtOutDir.Location = New-Object System.Drawing.Point(120, 119)
+$txtOutDir.Size = New-Object System.Drawing.Size(345, 22)
 $txtOutDir.Text = (Get-OutputDirPreference -Default $resultsDir)
 $form.Controls.Add($txtOutDir)
 
@@ -591,16 +594,16 @@ $form.Controls.Add($btnBrowseOut)
 # ---- Checkbox abrir apos gerar ----
 $chkOpen = New-Object System.Windows.Forms.CheckBox
 $chkOpen.Text = 'Abrir apos gerar'
-$chkOpen.Location = New-Object System.Drawing.Point(90, 152)
-$chkOpen.Size = New-Object System.Drawing.Size(465, 22)
+$chkOpen.Location = New-Object System.Drawing.Point(120, 152)
+$chkOpen.Size = New-Object System.Drawing.Size(435, 22)
 $chkOpen.Checked = $true
 $form.Controls.Add($chkOpen)
 
 # ---- Checkbox gerar PDF (compativel com SharePoint) ----
 $chkPdf = New-Object System.Windows.Forms.CheckBox
 $chkPdf.Text = 'Gerar PDF tambem (para upload no SharePoint)'
-$chkPdf.Location = New-Object System.Drawing.Point(90, 177)
-$chkPdf.Size = New-Object System.Drawing.Size(465, 22)
+$chkPdf.Location = New-Object System.Drawing.Point(120, 177)
+$chkPdf.Size = New-Object System.Drawing.Size(435, 22)
 $chkPdf.Checked = $false
 $form.Controls.Add($chkPdf)
 

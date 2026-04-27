@@ -52,14 +52,18 @@
 
     <!-- Checkbox no ExitDialog: "Iniciar Ferias Automacao agora".
          Marcado por default. Se o usuario deixar marcado e clicar
-         "Finish", roda o Gerar Relatorio.bat (que invoca o gui.ps1
-         via PowerShell). Custom action assincrona pra nao travar o
-         instalador esperando a janela fechar. -->
+         "Finish", invoca diretamente o powershell.exe com o gui.ps1
+         como argumento. CustomAction tipo 50 (Directory + ExeCommand)
+         garante que o shell e executado de fato com argumentos. O
+         tipo 18 (FileRef) tentava executar o .bat diretamente, mas
+         .bat precisa do cmd.exe interpretador, e isso falhava em
+         silencio. Async pra nao travar o instalador esperando a
+         janela do app fechar. -->
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Iniciar Ferias Automacao agora" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
     <CustomAction Id="LaunchApplication"
-                  FileRef="AppGerarRelatorioBat"
-                  ExeCommand=""
+                  Directory="INSTALLFOLDER"
+                  ExeCommand='"[System64Folder]WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "[INSTALLFOLDER]gui.ps1"'
                   Execute="immediate"
                   Return="asyncNoWait"
                   Impersonate="yes" />
