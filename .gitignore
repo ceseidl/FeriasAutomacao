@@ -31,3 +31,6 @@ installer/output/
 
 # Notas pessoais de entrega (gerado por mim, nao commita)
 ENTREGA.txt
+
+# Documento de contexto/onboarding gerado localmente (rascunho pessoal)
+docs/CONTEXTO-PROJETO.md
