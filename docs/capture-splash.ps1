@@ -123,7 +123,7 @@ $lblAuthor.Size       = New-Object System.Drawing.Size(528, 26)
 $splash.Controls.Add($lblAuthor)
 
 $lblVersion = New-Object System.Windows.Forms.Label
-$lblVersion.Text       = 'v1.0.0'
+$lblVersion.Text       = 'v1.0.0.1'
 $lblVersion.Font       = New-Object System.Drawing.Font('Segoe UI', 10)
 $lblVersion.ForeColor  = [System.Drawing.Color]::FromArgb(140, 140, 140)
 $lblVersion.BackColor  = [System.Drawing.Color]::Transparent
