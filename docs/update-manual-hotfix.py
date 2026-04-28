@@ -257,6 +257,147 @@ print(f'(8) Substituidos {trocas_8} run(s) com nome do MSI antigo.')
 
 
 # ============================================================
+# 9) Atualiza descricao da aba Integrantes em 2.1 -- 4 colunas
+# ============================================================
+old_2_1 = ('A planilha tem 5 abas: Ferias (a principal, onde o app le os dados), '
+           'Squads (lista de squads), Integrantes (lista de pessoas com seu squad), '
+           'Status (Aprovada/Planejada/Solicitada) e Instrucoes (texto de ajuda). '
+           'As 3 abas de listas alimentam os dropdowns das colunas Colaborador, '
+           'Squad e Status da aba Ferias - pra adicionar uma pessoa nova ou um '
+           'squad novo, edite a aba correspondente.')
+new_2_1 = ('A planilha tem 5 abas: Ferias (a principal, onde o app le os dados), '
+           'Squads (lista de squads), Integrantes (cadastro de pessoas com 4 colunas: '
+           'nome, squad, data de admissao na AIR e data fim das ultimas ferias), '
+           'Status (Aprovada/Planejada/Solicitada) e Instrucoes (texto de ajuda). '
+           'As abas de listas alimentam os dropdowns das colunas Colaborador, '
+           'Squad e Status da aba Ferias - pra adicionar uma pessoa nova ou um '
+           'squad novo, edite a aba correspondente.')
+trocas_9 = 0
+for p in doc.paragraphs:
+    if p.text.strip() == old_2_1:
+        set_text(p, new_2_1)
+        trocas_9 += 1
+        break
+print(f'(9) Aba Integrantes em 2.1: {trocas_9} paragrafo atualizado.')
+
+
+# ============================================================
+# 10) Insere subsecao "2.4 Cadastrar integrantes (datas de admissao
+#     e ferias)" antes da secao 3
+# ============================================================
+ja_tem_24 = any('2.4 Cadastrar integrantes' in p.text for p in doc.paragraphs)
+if not ja_tem_24:
+    p_secao3 = None
+    for p in doc.paragraphs:
+        if p.text.strip() == '3. Gerar o relatorio':
+            p_secao3 = p
+            break
+    if p_secao3 is not None:
+        h3_tpl = find_template('Heading 3')
+        first_tpl = find_template('First Paragraph')
+        compact_tpl = find_template('Compact')
+
+        blocks_24 = [
+            (h3_tpl, '2.4 Cadastrar integrantes (datas de admissao e ferias)'),
+            (first_tpl, 'A aba Integrantes alem de servir como cadastro de pessoas pros '
+                        'dropdowns, tambem alimenta a secao "Controle de Vencimento de Ferias" '
+                        'do relatorio (ver 6.2). Tem 4 colunas:'),
+            (compact_tpl, 'Integrante - nome do colaborador (mesmo nome usado na aba Ferias).'),
+            (compact_tpl, 'Squad - squad atual da pessoa.'),
+            (compact_tpl, 'Data de inicio na AIR - data de admissao na empresa, no formato dd/mm/aaaa.'),
+            (compact_tpl, 'Data das ultimas ferias - data fim do ultimo periodo de ferias tirado '
+                          'pela pessoa. Pode ficar em branco se ela nunca tirou ferias (o app '
+                          'calcula a partir da admissao).'),
+            (first_tpl, 'Importante: a coluna "Data das ultimas ferias" e atualizada manualmente. '
+                        'Toda vez que alguem volta de ferias, abra a aba Integrantes e atualize a '
+                        'data dela. Sem essa atualizacao, o app continua avisando que a pessoa '
+                        'precisa tirar ferias mesmo depois de ela ja ter tirado.'),
+        ]
+        inserted_24 = 0
+        for tpl, txt in blocks_24:
+            if tpl is None:
+                continue
+            new_p = clone_with_text(tpl, txt)
+            p_secao3._element.addprevious(new_p)
+            inserted_24 += 1
+        print(f'(10) Subsecao 2.4 inserida ({inserted_24} paragrafos).')
+    else:
+        print('(10) Heading "3. Gerar o relatorio" nao encontrado, pulando.')
+else:
+    print('(10) Subsecao 2.4 ja existe, pulando.')
+
+
+# ============================================================
+# 11) Renumera 6.2-6.4 e insere "6.2 Controle de Vencimento de
+#     Ferias" antes da nova 6.3
+# ============================================================
+ja_tem_62_venc = any('6.2 Controle de Vencimento' in p.text for p in doc.paragraphs)
+if not ja_tem_62_venc:
+    # 1. Renomeia 6.2 -> 6.3, 6.3 -> 6.4, 6.4 -> 6.5 (de tras pra frente
+    #    pra nao colidir nomes)
+    renames_6 = [
+        ('6.4 Rodape de autoria',  '6.5 Rodape de autoria'),
+        ('6.3 Gantt',              '6.4 Gantt'),
+        ('6.2 Cronograma detalhado','6.3 Cronograma detalhado'),
+    ]
+    for old, new in renames_6:
+        for p in doc.paragraphs:
+            if p.text.strip() == old:
+                set_text(p, new)
+                break
+
+    # 2. Atualiza o "tem 4 secoes" pra "tem 5 secoes" no paragrafo introdutorio
+    for p in doc.paragraphs:
+        if p.text.strip() == 'O HTML e o PDF tem 4 secoes:':
+            set_text(p, 'O HTML e o PDF tem 5 secoes:')
+            break
+
+    # 3. Insere nova "6.2 Controle de Vencimento de Ferias" antes da
+    #    nova 6.3 Cronograma detalhado
+    p_63 = None
+    for p in doc.paragraphs:
+        if p.text.strip() == '6.3 Cronograma detalhado':
+            p_63 = p
+            break
+    if p_63 is not None:
+        h3_tpl = find_template('Heading 3')
+        first_tpl = find_template('First Paragraph')
+        compact_tpl = find_template('Compact')
+
+        blocks_62 = [
+            (h3_tpl, '6.2 Controle de Vencimento de Ferias'),
+            (first_tpl, 'Aparece logo apos o Dashboard mensal. Calcula 1o e 2o vencimento de '
+                        'ferias por colaborador (CLT 12 e 24 meses) e destaca quem precisa tirar '
+                        'ferias antes de vencer. Janela de alerta: 6 meses antes de cada vencimento.'),
+            (first_tpl, 'A secao tem 3 sub-blocos coloridos:'),
+            (compact_tpl, 'CRITICO (vermelho) - pessoas com o 2o vencimento proximo (<= 6 meses) '
+                          'ou ja vencido. Quem ja passou do 2o vencimento esta com ferias EM '
+                          'DOBRO: pela CLT a empresa paga em duplicidade pelo periodo nao '
+                          'tirado. Acao: programar ferias com urgencia.'),
+            (compact_tpl, 'ATENCAO (laranja) - pessoas com o 1o vencimento proximo ou ja '
+                          'atingido. Ja tem direito a tirar ferias mas ainda nao tirou. '
+                          'Acao: planejar.'),
+            (compact_tpl, 'Dados incompletos (cinza) - pessoas sem "Data de inicio na AIR" '
+                          'preenchida na aba Integrantes. O app nao consegue calcular '
+                          'vencimento sem essa data. Acao: abrir a planilha e atualizar.'),
+            (first_tpl, 'Quem esta em dia (mais de 6 meses pra qualquer vencimento) NAO '
+                        'aparece na secao -- ela fica focada so em quem precisa de atencao.'),
+        ]
+        inserted_62 = 0
+        for tpl, txt in blocks_62:
+            if tpl is None:
+                continue
+            new_p = clone_with_text(tpl, txt)
+            p_63._element.addprevious(new_p)
+            inserted_62 += 1
+        print(f'(11) Secao 6.2 Vencimento + renumeracao 6.3-6.5: {inserted_62} paragrafos inseridos.')
+    else:
+        print('(11) Heading "6.3 Cronograma detalhado" nao encontrado pos-renumeracao, pulando.')
+else:
+    print('(11) Secao 6.2 Vencimento ja existe, pulando.')
+
+
+# ============================================================
 # Salva
 # ============================================================
 doc.save(str(DOCX))
