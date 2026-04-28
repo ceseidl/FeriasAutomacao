@@ -9,6 +9,9 @@ Stack: **PowerShell + Pandoc + Mermaid** (sem dependencia de Python).
 > **Usuario final:** consulte o **[Manual do Usuario (Word)](docs/MANUAL.docx?raw=true)**
 > com o passo-a-passo completo (download -> extracao -> preencher planilha ->
 > gerar relatorio -> troubleshooting).
+>
+> **Historico de versoes:** ver [CHANGELOG.md](CHANGELOG.md). Versao
+> atual: **v1.0.0.1** (com Controle de Vencimento de Ferias CLT).
 
 ---
 
@@ -200,6 +203,16 @@ Mermaid renderiza o Gantt no navegador via CDN (`cdn.jsdelivr.net`) — precisa 
 
 ---
 
+## Historico de versoes
+
+Cada release publicada tem uma entrada no **[CHANGELOG.md](CHANGELOG.md)**
+documentando o que foi adicionado/corrigido/modificado/removido. Formato
+baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
+
+Versao atual: **v1.0.0.1** ([ver no GitHub](https://github.com/ceseidl/FeriasAutomacao/releases/tag/v1.0.0.1)).
+
+---
+
 ## Melhorias futuras
 
 Lista de ideias mapeadas mas nao priorizadas: **[TODO.md](TODO.md)**.
@@ -211,6 +224,18 @@ Item atual em estudo:
   via `msiexec /f` esta documentado na tabela de Troubleshooting acima. Pra
   habilitar self-heal automatico precisaria de um launcher EXE + atalhos
   advertised. Detalhes e plano completo no [TODO.md](TODO.md).
+
+---
+
+## Documentacao -- mapa de arquivos
+
+| Arquivo | Para que |
+|---|---|
+| [README.md](README.md) | Visao geral tecnica (este arquivo) |
+| [CHANGELOG.md](CHANGELOG.md) | Historico de versoes e mudancas |
+| [docs/MANUAL.docx](docs/MANUAL.docx) | Manual do usuario final (Word) |
+| [TODO.md](TODO.md) | Melhorias futuras mapeadas |
+| [LICENSE](LICENSE) | Licenca MIT |
 
 ---
 
