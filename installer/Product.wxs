@@ -17,7 +17,7 @@
   <Package
       Name="Ferias Automacao"
       Manufacturer="Carlos Seidl"
-      Version="1.0.0"
+      Version="1.0.0.1"
       ProductCode="*"
       UpgradeCode="1278BE29-7DA4-4021-8DB9-CA6F717F49C0"
       Scope="perUser"

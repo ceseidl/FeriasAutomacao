@@ -9,7 +9,7 @@
         dotnet tool install --global wix --version 4.0.6
         wix extension add --global WixToolset.UI.wixext/4.0.6
 
-    Saida: installer\output\FeriasAutomacao-1.0.0.msi
+    Saida: installer\output\FeriasAutomacao-1.0.0.1.msi
 
 .EXAMPLE
     .\installer\build.ps1
@@ -22,7 +22,7 @@ $repoRoot     = Split-Path -Parent $PSScriptRoot
 $installerDir = $PSScriptRoot
 $outDir       = Join-Path $installerDir 'output'
 $wxs          = Join-Path $installerDir 'Product.wxs'
-$msi          = Join-Path $outDir 'FeriasAutomacao-1.0.0.msi'
+$msi          = Join-Path $outDir 'FeriasAutomacao-1.0.0.1.msi'
 
 # Garante a saida limpa
 if (Test-Path $outDir) { Remove-Item $outDir -Recurse -Force }

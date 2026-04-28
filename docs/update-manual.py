@@ -166,7 +166,7 @@ if not already_done:
         if p.text.strip().startswith('Clicar em FeriasAutomacao-latest.zip'):
             set_text(p, (
                 'Baixar uma das opcoes disponiveis na pagina (recomendado: '
-                'FeriasAutomacao-1.0.0.msi para instalacao automatica; '
+                'FeriasAutomacao-1.0.0.1.msi para instalacao automatica; '
                 'FeriasAutomacao-latest.zip para versao portatil sem '
                 'instalar nada).'
             ))
@@ -209,7 +209,7 @@ if not already_done:
              'O .msi instala o app por usuario (nao precisa de admin) em '
              '%LocalAppData%\\Programs\\FeriasAutomacao e cria os atalhos '
              'no menu Iniciar e na area de trabalho automaticamente.'),
-            ('Compact', 'Dar duplo clique em FeriasAutomacao-1.0.0.msi.'),
+            ('Compact', 'Dar duplo clique em FeriasAutomacao-1.0.0.1.msi.'),
             ('Compact',
              'O instalador mostra uma tela de selecao de features tipo '
              'arvore. Por padrao tudo vem marcado:'),

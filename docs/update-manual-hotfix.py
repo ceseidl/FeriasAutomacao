@@ -207,7 +207,7 @@ if not ja_tem_reparo:
         if compact_tpl is not None:
             txt = ('App parou de abrir / arquivo da pasta de instalacao foi deletado: '
                    'rodar de novo o .msi do release (oferece "Repair") ou abrir um console '
-                   'e executar msiexec /f "FeriasAutomacao-1.0.0.msi" pra reinstalar os '
+                   'e executar msiexec /f "FeriasAutomacao-1.0.0.1.msi" pra reinstalar os '
                    'arquivos faltantes. Como ultima alternativa, desinstalar pelo Painel '
                    'de Controle e reinstalar.')
             new_p = clone_with_text(compact_tpl, txt)
@@ -237,6 +237,23 @@ for p in doc.paragraphs:
         set_text(p, substituicoes_7[txt])
         trocas_7 += 1
 print(f'(7) Substituidas {trocas_7} mencoes ao checkbox removido.')
+
+
+# ============================================================
+# 8) Atualiza o nome do MSI nas referencias (release v1.0.0.1)
+# ============================================================
+# Substitui FeriasAutomacao-1.0.0.msi -> FeriasAutomacao-1.0.0.1.msi
+# em todos os runs de todos os paragrafos. Idempotente: se ja foi
+# trocado, nao acha mais.
+old_msi = 'FeriasAutomacao-1.0.0.msi'
+new_msi = 'FeriasAutomacao-1.0.0.1.msi'
+trocas_8 = 0
+for p in doc.paragraphs:
+    for r in p.runs:
+        if old_msi in r.text:
+            r.text = r.text.replace(old_msi, new_msi)
+            trocas_8 += 1
+print(f'(8) Substituidos {trocas_8} run(s) com nome do MSI antigo.')
 
 
 # ============================================================
